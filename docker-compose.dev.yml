@@ -1,0 +1,232 @@
+version: '3.8'
+
+services:
+  # PostgreSQL Database
+  postgres:
+    image: postgres:14-alpine
+    container_name: sme-postgres-dev
+    environment:
+      POSTGRES_DB: sme_analytics_dev
+      POSTGRES_USER: dev_user
+      POSTGRES_PASSWORD: dev_password
+      POSTGRES_INITDB_ARGS: "--encoding=UTF-8"
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./database/init-scripts:/docker-entrypoint-initdb.d
+    networks:
+      - sme-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U dev_user -d sme_analytics_dev"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # Redis Cache
+  redis:
+    image: redis:7-alpine
+    container_name: sme-redis-dev
+    command: redis-server --appendonly yes --maxmemory 512mb --maxmemory-policy allkeys-lru
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    networks:
+      - sme-network
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # Ollama for Local Model Deployment
+  ollama:
+    image: ollama/ollama:latest
+    container_name: sme-ollama-dev
+    ports:
+      - "11434:11434"
+    volumes:
+      - ollama_data:/root/.ollama
+      - ollama_models:/usr/share/ollama/.ollama
+    networks:
+      - sme-network
+    environment:
+      - OLLAMA_KEEP_ALIVE=24h
+      - OLLAMA_MAX_LOADED_MODELS=3
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:11434/api/tags"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # Spring Boot Backend
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile.dev
+    container_name: sme-backend-dev
+    ports:
+      - "8080:8080"
+      - "8081:8081"  # Management port
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    environment:
+      - SPRING_PROFILES_ACTIVE=development
+      - DATABASE_URL=postgresql://dev_user:dev_password@postgres:5432/sme_analytics_dev
+      - REDIS_URL=redis://redis:6379
+      - OLLAMA_BASE_URL=http://ollama:11434
+    volumes:
+      - ./backend:/app
+      - maven_cache:/root/.m2
+    networks:
+      - sme-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8081/actuator/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+
+  # React Frontend
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile.dev
+    container_name: sme-frontend-dev
+    ports:
+      - "3000:3000"
+    environment:
+      - REACT_APP_API_BASE_URL=http://localhost:8080/api
+      - REACT_APP_WS_BASE_URL=ws://localhost:8080/ws
+      - REACT_APP_ENV=development
+      - CHOKIDAR_USEPOLLING=true
+    volumes:
+      - ./frontend:/app
+      - frontend_node_modules:/app/node_modules
+    networks:
+      - sme-network
+    depends_on:
+      - backend
+    stdin_open: true
+    tty: true
+
+  # Python ML Services
+  ml-services:
+    build:
+      context: ./ml-models
+      dockerfile: Dockerfile.dev
+    container_name: sme-ml-services-dev
+    ports:
+      - "8001:8001"
+    environment:
+      - DATABASE_URL=postgresql://dev_user:dev_password@postgres:5432/sme_analytics_dev
+      - REDIS_URL=redis://redis:6379
+      - OLLAMA_BASE_URL=http://ollama:11434
+      - HUGGINGFACE_CACHE_DIR=/app/.cache/huggingface
+      - MODEL_CACHE_DIR=/app/.cache/models
+    volumes:
+      - ./ml-models:/app
+      - ml_cache:/app/.cache
+    networks:
+      - sme-network
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      ollama:
+        condition: service_healthy
+  # Nginx Reverse Proxy (for development)
+  nginx:
+    image: nginx:alpine
+    container_name: sme-nginx-dev
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx/dev.conf:/etc/nginx/conf.d/default.conf
+      - ./nginx/ssl:/etc/nginx/ssl
+    networks:
+      - sme-network
+    depends_on:
+      - backend
+      - frontend
+      - ml-services
+
+  # Prometheus for Monitoring
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: sme-prometheus-dev
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./monitoring/prometheus.yml:/etc/prometheus/prometheus.yml
+      - prometheus_data:/prometheus
+    networks:
+      - sme-network
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--web.console.libraries=/etc/prometheus/console_libraries'
+      - '--web.console.templates=/etc/prometheus/consoles'
+      - '--web.enable-lifecycle'
+
+  # Grafana for Visualization
+  grafana:
+    image: grafana/grafana:latest
+    container_name: sme-grafana-dev
+    ports:
+      - "3001:3000"
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=admin123
+      - GF_INSTALL_PLUGINS=grafana-clock-panel,grafana-simple-json-datasource
+    volumes:
+      - grafana_data:/var/lib/grafana
+      - ./monitoring/grafana/dashboards:/etc/grafana/provisioning/dashboards
+      - ./monitoring/grafana/datasources:/etc/grafana/provisioning/datasources
+    networks:
+      - sme-network
+    depends_on:
+      - prometheus
+
+  # Mailhog for Email Testing
+  mailhog:
+    image: mailhog/mailhog:latest
+    container_name: sme-mailhog-dev
+    ports:
+      - "1025:1025"  # SMTP
+      - "8025:8025"  # Web UI
+    networks:
+      - sme-network
+
+volumes:
+  postgres_data:
+    driver: local
+  redis_data:
+    driver: local
+  ollama_data:
+    driver: local
+  ollama_models:
+    driver: local
+  maven_cache:
+    driver: local
+  frontend_node_modules:
+    driver: local
+  ml_cache:
+    driver: local
+  prometheus_data:
+    driver: local
+  grafana_data:
+    driver: local
+
+networks:
+  sme-network:
+    driver: bridge
+    ipam:
+      driver: default
+      config:
+        - subnet: 172.20.0.0/16
