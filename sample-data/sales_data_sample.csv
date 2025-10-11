@@ -1,0 +1,32 @@
+Date,Revenue,Customers,Orders,Marketing_Spend,Product_Category,Region,Sales_Rep
+2023-01-01,45000,120,95,5000,Electronics,North,John Smith
+2023-01-02,52000,135,102,4800,Electronics,North,John Smith
+2023-01-03,38000,98,78,3200,Clothing,South,Sarah Johnson
+2023-01-04,61000,155,118,6200,Electronics,West,Mike Wilson
+2023-01-05,43000,112,89,4100,Home & Garden,East,Lisa Brown
+2023-01-06,56000,142,125,5800,Electronics,North,John Smith
+2023-01-07,49000,128,104,4900,Clothing,South,Sarah Johnson
+2023-01-08,67000,178,145,7100,Electronics,West,Mike Wilson
+2023-01-09,41000,105,82,3800,Home & Garden,East,Lisa Brown
+2023-01-10,58000,148,132,6000,Electronics,North,John Smith
+2023-01-11,44000,115,91,4300,Clothing,South,Sarah Johnson
+2023-01-12,63000,162,138,6500,Electronics,West,Mike Wilson
+2023-01-13,39000,101,76,3600,Home & Garden,East,Lisa Brown
+2023-01-14,55000,139,119,5500,Electronics,North,John Smith
+2023-01-15,48000,124,98,4700,Clothing,South,Sarah Johnson
+2023-01-16,69000,185,152,7300,Electronics,West,Mike Wilson
+2023-01-17,42000,108,85,3900,Home & Garden,East,Lisa Brown
+2023-01-18,57000,145,127,5700,Electronics,North,John Smith
+2023-01-19,46000,119,93,4400,Clothing,South,Sarah Johnson
+2023-01-20,65000,168,142,6700,Electronics,West,Mike Wilson
+2023-01-21,40000,103,79,3700,Home & Garden,East,Lisa Brown
+2023-01-22,54000,136,116,5400,Electronics,North,John Smith
+2023-01-23,47000,121,96,4600,Clothing,South,Sarah Johnson
+2023-01-24,66000,172,148,6800,Electronics,West,Mike Wilson
+2023-01-25,43000,111,87,4000,Home & Garden,East,Lisa Brown
+2023-01-26,59000,151,134,6100,Electronics,North,John Smith
+2023-01-27,45000,117,92,4200,Clothing,South,Sarah Johnson
+2023-01-28,68000,181,149,7200,Electronics,West,Mike Wilson
+2023-01-29,41000,106,83,3800,Home & Garden,East,Lisa Brown
+2023-01-30,56000,143,129,5900,Electronics,North,John Smith
+2023-01-31,48000,125,99,4800,Clothing,South,Sarah Johnson

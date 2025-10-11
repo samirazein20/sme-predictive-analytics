@@ -1,0 +1,13 @@
+Employee_ID,Name,Department,Position,Hire_Date,Salary,Performance_Score,Training_Hours,Projects_Completed,Overtime_Hours
+E001,John Smith,Sales,Sales Manager,2021-03-15,65000,4.2,40,12,15
+E002,Sarah Johnson,Sales,Sales Representative,2022-01-20,45000,4.5,35,18,22
+E003,Mike Wilson,Sales,Senior Sales Rep,2020-06-10,55000,4.3,38,15,18
+E004,Lisa Brown,Sales,Sales Representative,2022-09-05,43000,4.1,32,14,20
+E005,David Chen,Marketing,Marketing Manager,2021-11-12,62000,4.4,45,10,12
+E006,Emily Davis,Marketing,Content Specialist,2022-04-18,48000,4.6,42,22,8
+E007,Robert Kim,IT,IT Manager,2020-02-28,68000,4.3,50,8,25
+E008,Amanda White,IT,Software Developer,2021-07-22,58000,4.5,48,16,30
+E009,Carlos Rodriguez,Operations,Operations Manager,2020-12-03,60000,4.2,35,11,14
+E010,Jennifer Lee,Customer Service,CS Manager,2021-05-17,52000,4.4,38,13,16
+E011,Thomas Wilson,Customer Service,CS Representative,2022-08-09,38000,4.3,30,19,12
+E012,Maria Garcia,Finance,Accountant,2021-09-14,50000,4.5,28,9,10
