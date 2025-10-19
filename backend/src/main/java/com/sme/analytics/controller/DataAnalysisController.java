@@ -13,7 +13,6 @@ import java.util.List;
 
 @RestController
 @RequestMapping("/api/v1/data")
-@CrossOrigin(origins = {"*"})
 public class DataAnalysisController {
 
     @Autowired
