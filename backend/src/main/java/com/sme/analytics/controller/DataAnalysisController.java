@@ -62,6 +62,15 @@ public class DataAnalysisController {
         return ResponseEntity.ok(insights);
     }
 
+    @GetMapping("/session/{sessionId}")
+    public ResponseEntity<FileAnalysisResponse> getSession(@PathVariable String sessionId) {
+        FileAnalysisResponse response = dataAnalysisService.getSessionData(sessionId);
+        if (response == null) {
+            return ResponseEntity.notFound().build();
+        }
+        return ResponseEntity.ok(response);
+    }
+
     @GetMapping("/health")
     public ResponseEntity<String> health() {
         return ResponseEntity.ok("Data Analysis Service is healthy");

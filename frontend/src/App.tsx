@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { ThemeProvider, createTheme } from '@mui/material/styles';
 import CssBaseline from '@mui/material/CssBaseline';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
@@ -71,7 +71,34 @@ const Dashboard: React.FC = () => {
   const [uploadError, setUploadError] = useState<string | null>(null);
   const [analysisResults, setAnalysisResults] = useState<AnalysisResult | null>(null);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const [isRestoring, setIsRestoring] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Restore session on component mount
+  useEffect(() => {
+    const restoreSession = async () => {
+      const savedSessionId = apiService.getSavedSessionId();
+      if (savedSessionId) {
+        setIsRestoring(true);
+        try {
+          const sessionData = await apiService.getSession(savedSessionId);
+          if (sessionData && sessionData.success) {
+            setUploadedFiles([sessionData]);
+          } else {
+            // Session not found or invalid, clear it
+            apiService.clearSession();
+          }
+        } catch (error) {
+          console.error('Failed to restore session:', error);
+          apiService.clearSession();
+        } finally {
+          setIsRestoring(false);
+        }
+      }
+    };
+
+    restoreSession();
+  }, []);
 
   const handleTabChange = (event: React.SyntheticEvent, newValue: number) => {
     setActiveTab(newValue);
@@ -112,6 +139,7 @@ const Dashboard: React.FC = () => {
     setUploadedFiles([]);
     setAnalysisResults(null);
     setUploadError(null);
+    apiService.clearSession(); // Clear saved session
   };
 
   const renderOverview = () => (
@@ -228,13 +256,22 @@ const Dashboard: React.FC = () => {
         Upload your CSV or Excel files to get started with predictions.
       </Typography>
       
+      {isRestoring && (
+        <Box sx={{ mb: 2 }}>
+          <LinearProgress />
+          <Typography variant="caption" sx={{ mt: 1, display: 'block' }}>
+            Restoring your previous session...
+          </Typography>
+        </Box>
+      )}
+      
       <Box sx={{ mb: 2 }}>
         <Button 
           variant="contained" 
           component="label"
           startIcon={<CloudUpload />}
           sx={{ mr: 2 }}
-          disabled={isUploading || isAnalyzing}
+          disabled={isUploading || isAnalyzing || isRestoring}
         >
           {isUploading ? 'Uploading...' : 'Choose File'}
           <input 
@@ -615,7 +652,7 @@ const Dashboard: React.FC = () => {
       <AppBar position="static" color="transparent" elevation={1} sx={{ mb: 3, borderRadius: 1 }}>
         <Toolbar>
           <Typography variant="h5" component="h1" sx={{ flexGrow: 1 }}>
-            🚀 SME Analytics Platform
+            SME Analytics Platform
           </Typography>
           <Chip label="All Systems Operational" color="success" variant="outlined" />
         </Toolbar>

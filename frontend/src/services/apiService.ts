@@ -40,6 +40,7 @@ export interface AnalysisResult {
 class ApiService {
   private readonly backendUrl = 'http://localhost:8080';
   private readonly mlServiceUrl = 'http://localhost:8001';
+  private readonly SESSION_STORAGE_KEY = 'sme_analytics_session';
 
   async uploadFile(file: File): Promise<FileAnalysisResponse> {
     const formData = new FormData();
@@ -52,6 +53,23 @@ class ApiService {
 
     if (!response.ok) {
       throw new Error(`Upload failed: ${response.statusText}`);
+    }
+
+    const data: FileAnalysisResponse = await response.json();
+    
+    // Save session ID to localStorage
+    if (data.success && data.sessionId) {
+      this.saveSession(data.sessionId);
+    }
+    
+    return data;
+  }
+
+  async getSession(sessionId: string): Promise<FileAnalysisResponse> {
+    const response = await fetch(`${this.backendUrl}/api/v1/data/session/${sessionId}`);
+    
+    if (!response.ok) {
+      throw new Error(`Failed to get session: ${response.statusText}`);
     }
 
     return response.json();
@@ -132,6 +150,19 @@ class ApiService {
       reader.onerror = reject;
       reader.readAsText(file);
     });
+  }
+
+  // Session management methods
+  saveSession(sessionId: string): void {
+    localStorage.setItem(this.SESSION_STORAGE_KEY, sessionId);
+  }
+
+  getSavedSessionId(): string | null {
+    return localStorage.getItem(this.SESSION_STORAGE_KEY);
+  }
+
+  clearSession(): void {
+    localStorage.removeItem(this.SESSION_STORAGE_KEY);
   }
 }
 

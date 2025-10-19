@@ -2,6 +2,7 @@ package com.sme.analytics.service;
 
 import com.sme.analytics.dto.FileAnalysisResponse;
 import com.sme.analytics.dto.DataInsight;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -13,8 +14,10 @@ import java.util.*;
 @Service
 public class DataAnalysisService {
 
+    @Autowired
+    private SessionService sessionService;
+
     private final Map<String, List<DataInsight>> sessionInsights = new HashMap<>();
-    private final Map<String, FileAnalysisResponse> sessionData = new HashMap<>();
 
     public FileAnalysisResponse analyzeFile(MultipartFile file) throws IOException {
         String sessionId = UUID.randomUUID().toString();
@@ -68,7 +71,8 @@ public class DataAnalysisService {
             .analysisType(detectAnalysisType(columnNames))
             .build();
             
-        sessionData.put(sessionId, response);
+        // Save to session
+        sessionService.saveSession(sessionId, response);
         return response;
     }
 
@@ -220,6 +224,6 @@ public class DataAnalysisService {
     }
 
     public FileAnalysisResponse getSessionData(String sessionId) {
-        return sessionData.get(sessionId);
+        return sessionService.getSession(sessionId);
     }
 }
