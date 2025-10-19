@@ -17,7 +17,7 @@ This repository contains the complete implementation of the SME Predictive Analy
 
 1. **Clone the repository**
 ```bash
-git clone https://github.com/deniskisina/sme-predictive-analytics.git
+git clone https://github.com/samirazein20/sme-predictive-analytics.git
 cd sme-predictive-analytics
 ```
 
