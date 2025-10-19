@@ -1,3 +1,5 @@
+version: '3.8'
+
 services:
   # PostgreSQL Database
   postgres:
@@ -53,11 +55,10 @@ services:
       - OLLAMA_KEEP_ALIVE=24h
       - OLLAMA_MAX_LOADED_MODELS=3
     healthcheck:
-      test: ["CMD", "/bin/ollama", "list"]
+      test: ["CMD", "curl", "-f", "http://localhost:11434/api/tags"]
       interval: 30s
       timeout: 10s
-      retries: 5
-      start_period: 30s
+      retries: 3
 
   # Spring Boot Backend
   backend:
