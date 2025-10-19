@@ -1,5 +1,24 @@
 # SME Predictive Analytics Platform
 
+## 🚀 Azure Deployment Status
+
+**✅ DEPLOYED TO AZURE!**
+
+The application is now running on Azure Container Apps with automated CI/CD:
+
+- **Frontend**: https://frontend.prouddesert-fa0ab96d.eastus.azurecontainerapps.io ✅
+- **Backend**: https://backend.prouddesert-fa0ab96d.eastus.azurecontainerapps.io ✅
+- **ML Services**: https://ml-services.prouddesert-fa0ab96d.eastus.azurecontainerapps.io ✅
+
+� **CI/CD Pipeline**: Automated deployment via GitHub Actions on push to `main`
+
+�📖 **Deployment Documentation**:
+- [Deployment Success Summary](./DEPLOYMENT_SUCCESS.md) - Complete deployment overview
+- [GitHub Actions Setup](./docs/GITHUB_ACTIONS_SETUP.md) - CI/CD configuration guide
+- [CI/CD Quick Reference](./docs/CICD_QUICK_REFERENCE.md) - Common commands and troubleshooting
+- [Quick Reference](./QUICK_REFERENCE.md) - URLs and common commands
+- [Complete Deployment Details](./AZURE_DEPLOYMENT_COMPLETE.md) - Full deployment summary
+
 ## Project Overview
 This repository contains the complete implementation of the SME Predictive Analytics Platform with Reasoning Models, designed to provide small and medium enterprises with advanced forecasting capabilities using state-of-the-art transformer models and reasoning AI.
 
@@ -78,6 +97,38 @@ python -m uvicorn main:app --reload --port 8001
 - **Deployment**: Docker, Kubernetes, Cloud platforms
 
 ## Development Workflow
+
+### CI/CD Pipeline
+
+**Automated Deployment**:
+Every push to `main` triggers an automated build and deployment pipeline:
+
+```bash
+# Make changes
+git add .
+git commit -m "Your changes"
+git push origin main
+
+# GitHub Actions automatically:
+# 1. Runs tests for all services
+# 2. Builds Docker images
+# 3. Pushes to Azure Container Registry
+# 4. Deploys to Azure Container Apps
+# 5. Verifies health endpoints
+```
+
+**Setup CI/CD** (one-time):
+```bash
+# Run automated setup script
+./scripts/setup-github-secrets.sh
+
+# Or follow manual setup guide
+See: docs/GITHUB_ACTIONS_SETUP.md
+```
+
+**Monitor Deployments**:
+- GitHub Actions: https://github.com/samirazein20/sme-predictive-analytics/actions
+- Quick Reference: `docs/CICD_QUICK_REFERENCE.md`
 
 ### Branching Strategy
 - `main`: Production-ready code
