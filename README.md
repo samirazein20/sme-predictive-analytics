@@ -98,6 +98,25 @@ python -m uvicorn main:app --reload --port 8001
 
 ## Development Workflow
 
+### Environment Configuration
+
+The application uses environment-specific configuration for local development and production deployment:
+
+**Local Development**:
+- Frontend automatically uses `http://localhost:8080` for backend
+- ML services at `http://localhost:8001`
+- Configuration in `frontend/.env.development`
+
+**Production Deployment**:
+- Frontend uses Azure Container Apps URLs
+- Backend: `https://backend.prouddesert-fa0ab96d.eastus.azurecontainerapps.io`
+- ML Services: `https://ml-services.prouddesert-fa0ab96d.eastus.azurecontainerapps.io`
+- Configuration in `frontend/.env.production`
+
+For detailed environment setup, see [Environment Configuration Guide](docs/ENVIRONMENT_CONFIGURATION.md).
+
+### Local Development
+
 ### CI/CD Pipeline
 
 **Automated Deployment**:
