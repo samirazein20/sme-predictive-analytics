@@ -1,4 +1,6 @@
 # Core ML and AI libraries
+# Using CPU-only torch to reduce image size from ~4GB to ~800MB
+# Install with: pip install torch --index-url https://download.pytorch.org/whl/cpu
 torch>=2.0.0
 transformers>=4.30.0
 huggingface-hub>=0.15.0

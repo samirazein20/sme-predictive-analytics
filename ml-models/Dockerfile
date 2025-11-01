@@ -9,12 +9,16 @@ RUN apt-get update && \
     gcc \
     g++ \
     build-essential && \
-    rm -rf /var/lib/apt/lists/*
+    apt-get clean && \
+    rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
 
 # Copy requirements and install dependencies
+# Install torch first from CPU-only wheel (saves ~3GB vs CUDA version)
 COPY requirements.txt .
 RUN pip install --upgrade pip && \
-    pip install --no-cache-dir -r requirements.txt
+    pip install --no-cache-dir torch --index-url https://download.pytorch.org/whl/cpu && \
+    pip install --no-cache-dir -r requirements.txt && \
+    rm -rf /root/.cache/pip /tmp/* /var/tmp/*
 
 # Production stage
 FROM python:3.11-slim
@@ -31,8 +35,10 @@ COPY --from=builder /usr/local/bin /usr/local/bin
 # Copy application code
 COPY . .
 
-# Install package in production mode
-RUN pip install --no-cache-dir -e .
+# Install package in production mode and cleanup
+RUN pip install --no-cache-dir -e . && \
+    rm -rf /root/.cache/pip /tmp/* /var/tmp/* && \
+    find /usr/local/lib/python3.11 -type d -name __pycache__ -exec rm -rf {} + 2>/dev/null || true
 
 # Change ownership
 RUN chown -R mluser:mluser /app
