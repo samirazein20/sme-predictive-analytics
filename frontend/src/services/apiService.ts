@@ -38,9 +38,17 @@ export interface AnalysisResult {
 }
 
 class ApiService {
-  private readonly backendUrl = 'http://localhost:8080';
-  private readonly mlServiceUrl = 'http://localhost:8001';
+  private readonly backendUrl = process.env.REACT_APP_BACKEND_URL || 'http://localhost:8080';
+  private readonly mlServiceUrl = process.env.REACT_APP_ML_SERVICE_URL || 'http://localhost:8001';
   private readonly SESSION_STORAGE_KEY = 'sme_analytics_session';
+
+  constructor() {
+    console.log('API Service Configuration:', {
+      backendUrl: this.backendUrl,
+      mlServiceUrl: this.mlServiceUrl,
+      environment: process.env.REACT_APP_ENV || 'development'
+    });
+  }
 
   async uploadFile(file: File): Promise<FileAnalysisResponse> {
     const formData = new FormData();
