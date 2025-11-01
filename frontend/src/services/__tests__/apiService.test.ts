@@ -3,96 +3,130 @@
  * Tests HTTP requests, error handling, and session management
  */
 
-import axios from 'axios';
-import { uploadFile, getInsights, getSession } from '../apiService';
+import { apiService } from '../apiService';
 
-jest.mock('axios');
-const mockedAxios = axios as jest.Mocked<typeof axios>;
+// Mock fetch globally
+global.fetch = jest.fn();
 
 describe('API Service', () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    (global.fetch as jest.Mock).mockClear();
   });
 
   describe('uploadFile', () => {
     test('successfully uploads file', async () => {
       const mockResponse = {
-        data: {
-          sessionId: 'test-123',
-          message: 'File uploaded successfully',
-        },
+        success: true,
+        sessionId: 'test-123',
+        message: 'File uploaded successfully',
+        fileName: 'test.csv',
+        fileSize: 1024,
+        rowCount: 10,
+        columnCount: 5,
+        columnNames: ['col1', 'col2'],
+        basicStatistics: {},
+        insights: [],
+        analysisType: 'general'
       };
-      mockedAxios.post.mockResolvedValue(mockResponse);
 
-      const formData = new FormData();
-      formData.append('file', new Blob(['test']), 'test.csv');
+      (global.fetch as jest.Mock).mockResolvedValue({
+        ok: true,
+        json: async () => mockResponse,
+      });
 
-      const result = await uploadFile(formData, 'session-123');
+      const file = new File(['test'], 'test.csv', { type: 'text/csv' });
+      const result = await apiService.uploadFile(file);
 
-      expect(mockedAxios.post).toHaveBeenCalledWith(
+      expect(global.fetch).toHaveBeenCalledWith(
         expect.stringContaining('/api/v1/data/upload'),
-        formData,
-        expect.any(Object)
+        expect.objectContaining({
+          method: 'POST',
+          body: expect.any(FormData)
+        })
       );
-      expect(result).toEqual(mockResponse.data);
+      expect(result).toEqual(mockResponse);
     });
 
     test('handles upload error', async () => {
-      mockedAxios.post.mockRejectedValue(new Error('Network error'));
+      (global.fetch as jest.Mock).mockResolvedValue({
+        ok: false,
+        statusText: 'Network error',
+      });
 
-      const formData = new FormData();
+      const file = new File(['test'], 'test.csv', { type: 'text/csv' });
       
-      await expect(uploadFile(formData, 'session-123')).rejects.toThrow(
-        'Network error'
+      await expect(apiService.uploadFile(file)).rejects.toThrow(
+        'Upload failed: Network error'
       );
     });
   });
 
   describe('getInsights', () => {
     test('successfully retrieves insights', async () => {
-      const mockInsights = {
-        data: {
-          totalRevenue: 50000,
-          totalExpenses: 25000,
-          profitMargin: 50,
-        },
-      };
-      mockedAxios.get.mockResolvedValue(mockInsights);
+      const mockInsights = [
+        {
+          type: 'revenue',
+          title: 'Revenue Trend',
+          description: 'Revenue is increasing',
+          value: '50000',
+          category: 'financial',
+          confidence: 0.9
+        }
+      ];
 
-      const result = await getInsights('session-123');
+      (global.fetch as jest.Mock).mockResolvedValue({
+        ok: true,
+        json: async () => mockInsights,
+      });
 
-      expect(mockedAxios.get).toHaveBeenCalledWith(
+      const result = await apiService.getInsights('session-123');
+
+      expect(global.fetch).toHaveBeenCalledWith(
         expect.stringContaining('/api/v1/data/insights/session-123')
       );
-      expect(result).toEqual(mockInsights.data);
+      expect(result).toEqual(mockInsights);
     });
 
     test('handles 404 error for missing session', async () => {
-      mockedAxios.get.mockRejectedValue({
-        response: { status: 404 },
+      (global.fetch as jest.Mock).mockResolvedValue({
+        ok: false,
+        statusText: 'Not Found',
       });
 
-      await expect(getInsights('invalid-session')).rejects.toBeTruthy();
+      await expect(apiService.getInsights('invalid-session')).rejects.toThrow(
+        'Failed to get insights: Not Found'
+      );
     });
   });
 
   describe('getSession', () => {
     test('successfully retrieves session data', async () => {
       const mockSession = {
-        data: {
-          sessionId: 'session-123',
-          status: 'active',
-          createdAt: '2024-10-18T10:00:00',
-        },
+        success: true,
+        sessionId: 'session-123',
+        message: 'Session retrieved',
+        fileName: 'test.csv',
+        fileSize: 1024,
+        rowCount: 10,
+        columnCount: 5,
+        columnNames: ['col1', 'col2'],
+        basicStatistics: {},
+        insights: [],
+        analysisType: 'general'
       };
-      mockedAxios.get.mockResolvedValue(mockSession);
 
-      const result = await getSession('session-123');
+      (global.fetch as jest.Mock).mockResolvedValue({
+        ok: true,
+        json: async () => mockSession,
+      });
 
-      expect(mockedAxios.get).toHaveBeenCalledWith(
+      const result = await apiService.getSession('session-123');
+
+      expect(global.fetch).toHaveBeenCalledWith(
         expect.stringContaining('/api/v1/data/session/session-123')
       );
-      expect(result).toEqual(mockSession.data);
+      expect(result).toEqual(mockSession);
     });
   });
 });
