@@ -58,8 +58,7 @@ jobs:
       - name: Build and push backend Docker image
         uses: docker/build-push-action@v5
         with:
-          context: ./backend
-          file: ./backend/Dockerfile
+          context: backend
           push: true
           tags: |
             ${{ env.AZURE_CONTAINER_REGISTRY }}.azurecr.io/${{ env.BACKEND_IMAGE }}:latest
@@ -115,8 +114,7 @@ jobs:
       - name: Build and push ML services Docker image
         uses: docker/build-push-action@v5
         with:
-          context: ./ml-models
-          file: ./ml-models/Dockerfile
+          context: ml-models
           push: true
           tags: |
             ${{ env.AZURE_CONTAINER_REGISTRY }}.azurecr.io/${{ env.ML_SERVICES_IMAGE }}:latest
@@ -172,8 +170,7 @@ jobs:
       - name: Build and push frontend Docker image
         uses: docker/build-push-action@v5
         with:
-          context: ./frontend
-          file: ./frontend/Dockerfile
+          context: frontend
           push: true
           tags: |
             ${{ env.AZURE_CONTAINER_REGISTRY }}.azurecr.io/${{ env.FRONTEND_IMAGE }}:latest
