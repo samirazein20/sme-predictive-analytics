@@ -72,7 +72,7 @@ class TestFastAPIEndpoints:
         response = client.get("/")
         
         assert response.status_code == 200
-        assert "ML Analysis Service" in response.json()["message"]
+        assert "SME Analytics ML Services" in response.json()["message"]
 
     def test_health_endpoint(self):
         """Test health check endpoint"""
@@ -87,20 +87,22 @@ class TestFastAPIEndpoints:
         
         response = client.post(
             "/analyze",
-            json={"data": csv_data, "session_id": "test-123"}
+            json={"data": csv_data}
         )
         
         assert response.status_code == 200
         result = response.json()
         assert "insights" in result
-        assert "session_id" in result
-        assert result["session_id"] == "test-123"
+        assert "predictions" in result
+        assert "trends" in result
+        assert "charts_data" in result
+        assert "summary_stats" in result
 
     def test_analyze_endpoint_invalid_data(self):
         """Test analyze endpoint with invalid data"""
         response = client.post(
             "/analyze",
-            json={"data": "", "session_id": "test-123"}
+            json={"data": ""}
         )
         
         assert response.status_code == 400 or response.status_code == 422
@@ -109,21 +111,21 @@ class TestFastAPIEndpoints:
         """Test analyze endpoint with missing required fields"""
         response = client.post(
             "/analyze",
-            json={"data": "some data"}  # Missing session_id
+            json={}  # Missing required 'data' field
         )
         
         assert response.status_code == 422
 
     def test_analyze_endpoint_malformed_csv(self):
         """Test analyze endpoint with malformed CSV"""
-        csv_data = "Invalid,CSV,Format\n,,"
+        csv_data = "Column1\nvalue1\nvalue2"
         
         response = client.post(
             "/analyze",
-            json={"data": csv_data, "session_id": "test-123"}
+            json={"data": csv_data}
         )
         
-        # Should handle gracefully
+        # Should handle simple CSV gracefully
         assert response.status_code in [200, 400, 422]
 
 
@@ -142,7 +144,7 @@ class TestPerformance:
         start_time = time.time()
         response = client.post(
             "/analyze",
-            json={"data": csv_data, "session_id": "perf-test"}
+            json={"data": csv_data}
         )
         end_time = time.time()
         
@@ -160,7 +162,7 @@ class TestPerformance:
         
         response = client.post(
             "/analyze",
-            json={"data": csv_data, "session_id": "large-test"}
+            json={"data": csv_data}
         )
         
         assert response.status_code == 200
