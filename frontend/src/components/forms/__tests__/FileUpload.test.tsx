@@ -9,12 +9,15 @@ import '@testing-library/jest-dom';
 import FileUpload from '../FileUpload';
 
 // Mock the api service
-jest.mock('../../services/api', () => ({
+jest.mock('../../../services/api', () => ({
   dataService: {
     uploadFile: jest.fn().mockResolvedValue({
       success: true,
-      sessionId: 'test-123',
-      message: 'File uploaded successfully',
+      id: 'test-123',
+      filename: 'test.csv',
+      rows: 10,
+      columns: ['col1', 'col2'],
+      status: 'ready',
     }),
   },
 }));
