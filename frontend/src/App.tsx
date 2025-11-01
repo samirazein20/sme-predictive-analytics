@@ -31,7 +31,7 @@ import {
   CheckCircle,
   Info
 } from '@mui/icons-material';
-import { apiService, FileAnalysisResponse, AnalysisResult } from './services/apiService.ts';
+import { apiService, FileAnalysisResponse, AnalysisResult } from './services/apiService';
 
 const theme = createTheme({
   palette: {
