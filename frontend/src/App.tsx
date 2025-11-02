@@ -42,7 +42,8 @@ import {
   Backdrop,
   Menu,
   MenuItem,
-  TextField
+  TextField,
+  Snackbar
 } from '@mui/material';
 import { 
   CloudUpload, 
@@ -172,6 +173,15 @@ const Dashboard: React.FC = () => {
   const [emailDialogOpen, setEmailDialogOpen] = useState(false);
   const [emailAddress, setEmailAddress] = useState('');
   const [exportTemplateDialogOpen, setExportTemplateDialogOpen] = useState(false);
+  const [snackbar, setSnackbar] = useState<{
+    open: boolean;
+    message: string;
+    severity: 'success' | 'error' | 'info' | 'warning';
+  }>({
+    open: false,
+    message: '',
+    severity: 'info'
+  });
   const [exportTemplate, setExportTemplate] = useState({
     includeTrends: true,
     includePredictions: true,
@@ -411,8 +421,9 @@ const Dashboard: React.FC = () => {
     setDownloadMenuAnchor(null);
   };
 
-  const exportToCSV = () => {
-    if (!analysisResults) return;
+  // Generate CSV report data (reusable for download and email)
+  const generateCSVReport = (): string => {
+    if (!analysisResults) return '';
 
     let csvContent = 'SME Analytics Report\n\n';
     csvContent += `Generated: ${new Date().toLocaleString()}\n`;
@@ -461,6 +472,14 @@ const Dashboard: React.FC = () => {
         });
       }
     }
+
+    return csvContent;
+  };
+
+  const exportToCSV = () => {
+    if (!analysisResults) return;
+
+    const csvContent = generateCSVReport();
 
     // Create and download file
     const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
@@ -572,27 +591,59 @@ const Dashboard: React.FC = () => {
     handleDownloadClose();
   };
 
-  const handleEmailSend = () => {
+  const handleEmailSend = async () => {
     if (!emailAddress || !analysisResults) return;
 
-    // In a real app, this would call a backend API to send email
-    // For now, we'll just show a success message and copy report data
-    const reportSummary = `
-SME Analytics Report Summary
+    setIsAnalyzing(true);
+    
+    try {
+      // Generate the CSV report data
+      const reportData = generateCSVReport();
+      
+      // Determine report type from template
+      const includedSections = Object.entries(exportTemplate)
+        .filter(([_, included]) => included)
+        .map(([key]) => key.replace('include', ''))
+        .join(', ');
+      const reportType = includedSections || 'Full Analysis';
+      
+      // Call backend API to send email
+      const response = await fetch('http://localhost:8080/api/reports/email', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          email: emailAddress,
+          reportData: reportData,
+          reportType: reportType
+        })
+      });
 
-Trends: ${Object.keys(analysisResults.trends || {}).length} metrics analyzed
-Predictions: ${(analysisResults.predictions || []).length} days forecasted
-Insights: ${(analysisResults.insights || []).length} AI-generated insights
-Recommendations: ${generateRecommendations(analysisResults).length} action items
-
-Visit the platform to view full interactive report.
-    `.trim();
-
-    // Copy to clipboard
-    navigator.clipboard.writeText(reportSummary);
-
-    alert(`Report summary copied to clipboard!\n\nIn production, this would email the full report to: ${emailAddress}`);
-    setEmailDialogOpen(false);
+      const result = await response.json();
+      
+      if (response.ok && result.success) {
+        setSnackbar({
+          open: true,
+          message: `✅ Report successfully sent to ${emailAddress}!`,
+          severity: 'success'
+        });
+        setEmailDialogOpen(false);
+        setEmailAddress('');
+      } else {
+        throw new Error(result.message || 'Failed to send email');
+      }
+      
+    } catch (error) {
+      console.error('Error sending email:', error);
+      setSnackbar({
+        open: true,
+        message: `❌ Failed to send email: ${error instanceof Error ? error.message : 'Unknown error'}`,
+        severity: 'error'
+      });
+    } finally {
+      setIsAnalyzing(false);
+    }
     setEmailAddress('');
   };
 
@@ -2554,6 +2605,22 @@ Upload CSV or Excel files with your business data to get started.`}
           onClick={() => setHighlightedElement(null)}
         />
       )}
+
+      {/* Snackbar for notifications */}
+      <Snackbar
+        open={snackbar.open}
+        autoHideDuration={6000}
+        onClose={() => setSnackbar({ ...snackbar, open: false })}
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+      >
+        <Alert 
+          onClose={() => setSnackbar({ ...snackbar, open: false })} 
+          severity={snackbar.severity}
+          sx={{ width: '100%' }}
+        >
+          {snackbar.message}
+        </Alert>
+      </Snackbar>
     </Container>
   );
 };
