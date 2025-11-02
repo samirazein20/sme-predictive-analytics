@@ -28,6 +28,7 @@ import {
   ListItemText,
   Switch,
   FormControlLabel,
+  Checkbox,
   Divider,
   Dialog,
   DialogTitle,
@@ -75,7 +76,9 @@ import {
   ArrowForward,
   ArrowUpwardOutlined,
   ArrowDownwardOutlined,
-  CalendarToday
+  CalendarToday,
+  Settings,
+  Description
 } from '@mui/icons-material';
 import { apiService, FileAnalysisResponse, AnalysisResult } from './services/apiService';
 import { 
@@ -86,6 +89,30 @@ import {
 } from './utils/explanationGenerator';
 import { EmptyState } from './components/EmptyState';
 import { DragDropUpload } from './components/DragDropUpload';
+import {
+  Chart as ChartJS,
+  CategoryScale,
+  LinearScale,
+  PointElement,
+  LineElement,
+  BarElement,
+  Title,
+  Tooltip,
+  Legend
+} from 'chart.js';
+import { Line, Bar } from 'react-chartjs-2';
+
+// Register Chart.js components
+ChartJS.register(
+  CategoryScale,
+  LinearScale,
+  PointElement,
+  LineElement,
+  BarElement,
+  Title,
+  Tooltip,
+  Legend
+);
 
 const theme = createTheme({
   palette: {
@@ -144,6 +171,14 @@ const Dashboard: React.FC = () => {
   const [downloadMenuAnchor, setDownloadMenuAnchor] = useState<null | HTMLElement>(null);
   const [emailDialogOpen, setEmailDialogOpen] = useState(false);
   const [emailAddress, setEmailAddress] = useState('');
+  const [exportTemplateDialogOpen, setExportTemplateDialogOpen] = useState(false);
+  const [exportTemplate, setExportTemplate] = useState({
+    includeTrends: true,
+    includePredictions: true,
+    includeInsights: true,
+    includeRecommendations: true,
+    includeCharts: false, // Optional for future chart export
+  });
 
   // Comparison Mode state
   const [periodAFiles, setPeriodAFiles] = useState<FileAnalysisResponse[]>([]);
@@ -163,6 +198,18 @@ const Dashboard: React.FC = () => {
       setTimeout(() => {
         setShowOnboarding(true);
       }, 1000);
+    }
+  }, []);
+
+  // Load saved export template preferences
+  useEffect(() => {
+    const savedTemplate = localStorage.getItem('exportTemplate');
+    if (savedTemplate) {
+      try {
+        setExportTemplate(JSON.parse(savedTemplate));
+      } catch (e) {
+        console.warn('Failed to load export template preferences:', e);
+      }
     }
   }, []);
 
@@ -368,41 +415,51 @@ const Dashboard: React.FC = () => {
     if (!analysisResults) return;
 
     let csvContent = 'SME Analytics Report\n\n';
-    csvContent += `Generated: ${new Date().toLocaleString()}\n\n`;
+    csvContent += `Generated: ${new Date().toLocaleString()}\n`;
+    csvContent += `Template: ${Object.entries(exportTemplate).filter(([_, v]) => v).map(([k]) => k.replace('include', '')).join(', ')}\n\n`;
 
-    // Trends section
-    csvContent += 'TRENDS\n';
-    csvContent += 'Metric,Direction,Change %\n';
-    Object.entries(analysisResults.trends || {}).forEach(([key, trend]: [string, any]) => {
-      csvContent += `${key.replace(/_/g, ' ')},${trend.direction},${trend.change_percent}%\n`;
-    });
-    csvContent += '\n';
-
-    // Predictions section
-    csvContent += 'PREDICTIONS (7 days)\n';
-    csvContent += 'Day,Forecast Value\n';
-    (analysisResults.predictions || []).forEach((prediction, index) => {
-      csvContent += `Day ${index + 1},${prediction.toFixed(2)}\n`;
-    });
-    csvContent += '\n';
-
-    // Insights section
-    csvContent += 'AI INSIGHTS\n';
-    csvContent += 'Title,Category,Message,Confidence\n';
-    (analysisResults.insights || []).forEach((insight) => {
-      const message = insight.message.replace(/,/g, ';'); // Replace commas to avoid CSV issues
-      csvContent += `${insight.title},${insight.category},${message},${Math.round(insight.score * 100)}%\n`;
-    });
-
-    // Recommendations section
-    const recommendations = generateRecommendations(analysisResults);
-    if (recommendations.length > 0) {
-      csvContent += '\nRECOMMENDATIONS\n';
-      csvContent += 'Priority,Title,Category,Action\n';
-      recommendations.forEach((rec) => {
-        const action = rec.action.replace(/,/g, ';');
-        csvContent += `${rec.priority.toUpperCase()},${rec.title},${rec.category},${action}\n`;
+    // Trends section (conditional)
+    if (exportTemplate.includeTrends) {
+      csvContent += 'TRENDS\n';
+      csvContent += 'Metric,Direction,Change %\n';
+      Object.entries(analysisResults.trends || {}).forEach(([key, trend]: [string, any]) => {
+        csvContent += `${key.replace(/_/g, ' ')},${trend.direction},${trend.change_percent}%\n`;
       });
+      csvContent += '\n';
+    }
+
+    // Predictions section (conditional)
+    if (exportTemplate.includePredictions) {
+      csvContent += 'PREDICTIONS (7 days)\n';
+      csvContent += 'Day,Forecast Value\n';
+      (analysisResults.predictions || []).forEach((prediction, index) => {
+        csvContent += `Day ${index + 1},${prediction.toFixed(2)}\n`;
+      });
+      csvContent += '\n';
+    }
+
+    // Insights section (conditional)
+    if (exportTemplate.includeInsights) {
+      csvContent += 'AI INSIGHTS\n';
+      csvContent += 'Title,Category,Message,Confidence\n';
+      (analysisResults.insights || []).forEach((insight) => {
+        const message = insight.message.replace(/,/g, ';'); // Replace commas to avoid CSV issues
+        csvContent += `${insight.title},${insight.category},${message},${Math.round(insight.score * 100)}%\n`;
+      });
+      csvContent += '\n';
+    }
+
+    // Recommendations section (conditional)
+    if (exportTemplate.includeRecommendations) {
+      const recommendations = generateRecommendations(analysisResults);
+      if (recommendations.length > 0) {
+        csvContent += 'RECOMMENDATIONS\n';
+        csvContent += 'Priority,Title,Category,Action\n';
+        recommendations.forEach((rec) => {
+          const action = rec.action.replace(/,/g, ';');
+          csvContent += `${rec.priority.toUpperCase()},${rec.title},${rec.category},${action}\n`;
+        });
+      }
     }
 
     // Create and download file
@@ -1130,6 +1187,15 @@ Visit the platform to view full interactive report.
           </ListItemText>
         </MenuItem>
         <Divider />
+        <MenuItem onClick={() => { setExportTemplateDialogOpen(true); handleDownloadClose(); }}>
+          <ListItemIcon>
+            <Settings fontSize="small" />
+          </ListItemIcon>
+          <ListItemText>
+            <Typography variant="body2">Configure Template</Typography>
+            <Typography variant="caption" color="text.secondary">Customize export sections</Typography>
+          </ListItemText>
+        </MenuItem>
         <MenuItem onClick={handleEmailReport}>
           <ListItemIcon>
             <Email fontSize="small" />
@@ -1833,6 +1899,208 @@ Upload CSV or Excel files with your business data to get started.`}
               </Box>
             )}
 
+            {/* Comparison Charts */}
+            <Box sx={{ mb: 4 }}>
+              <Typography variant="h6" gutterBottom sx={{ display: 'flex', alignItems: 'center' }}>
+                <ShowChart sx={{ mr: 1 }} />
+                Visual Comparison
+              </Typography>
+              
+              {/* Metrics Bar Chart */}
+              {periodAResults.trends && periodBResults.trends && (
+                <Card sx={{ mb: 3 }}>
+                  <CardContent>
+                    <Typography variant="subtitle1" gutterBottom>
+                      Metrics Comparison (Side-by-Side)
+                    </Typography>
+                    <Box sx={{ height: 400 }}>
+                      <Bar
+                        data={{
+                          labels: Object.keys(periodAResults.trends).map(key => 
+                            key.replace(/_/g, ' ').toUpperCase()
+                          ),
+                          datasets: [
+                            {
+                              label: `Period A (${periodADate?.format('MMM YYYY')})`,
+                              data: Object.values(periodAResults.trends).map((trend: any) => trend.latest_value || 0),
+                              backgroundColor: 'rgba(33, 150, 243, 0.6)',
+                              borderColor: 'rgba(33, 150, 243, 1)',
+                              borderWidth: 2,
+                            },
+                            {
+                              label: `Period B (${periodBDate?.format('MMM YYYY')})`,
+                              data: Object.values(periodBResults.trends).map((trend: any) => trend.latest_value || 0),
+                              backgroundColor: 'rgba(156, 39, 176, 0.6)',
+                              borderColor: 'rgba(156, 39, 176, 1)',
+                              borderWidth: 2,
+                            },
+                          ],
+                        }}
+                        options={{
+                          responsive: true,
+                          maintainAspectRatio: false,
+                          plugins: {
+                            legend: {
+                              position: 'top' as const,
+                            },
+                            title: {
+                              display: false,
+                            },
+                          },
+                          scales: {
+                            y: {
+                              beginAtZero: true,
+                            },
+                          },
+                        }}
+                      />
+                    </Box>
+                  </CardContent>
+                </Card>
+              )}
+
+              {/* Predictions Line Chart */}
+              {periodAResults.predictions && periodBResults.predictions && (
+                <Card sx={{ mb: 3 }}>
+                  <CardContent>
+                    <Typography variant="subtitle1" gutterBottom>
+                      Forecast Trends (7-Day Comparison)
+                    </Typography>
+                    <Box sx={{ height: 350 }}>
+                      <Line
+                        data={{
+                          labels: Array.from({ length: 7 }, (_, i) => `Day ${i + 1}`),
+                          datasets: [
+                            {
+                              label: `Period A Forecast`,
+                              data: periodAResults.predictions,
+                              borderColor: 'rgba(33, 150, 243, 1)',
+                              backgroundColor: 'rgba(33, 150, 243, 0.1)',
+                              tension: 0.4,
+                              fill: true,
+                              pointRadius: 5,
+                              pointHoverRadius: 7,
+                            },
+                            {
+                              label: `Period B Forecast`,
+                              data: periodBResults.predictions,
+                              borderColor: 'rgba(156, 39, 176, 1)',
+                              backgroundColor: 'rgba(156, 39, 176, 0.1)',
+                              tension: 0.4,
+                              fill: true,
+                              pointRadius: 5,
+                              pointHoverRadius: 7,
+                            },
+                          ],
+                        }}
+                        options={{
+                          responsive: true,
+                          maintainAspectRatio: false,
+                          plugins: {
+                            legend: {
+                              position: 'top' as const,
+                            },
+                            tooltip: {
+                              mode: 'index' as const,
+                              intersect: false,
+                            },
+                          },
+                          scales: {
+                            y: {
+                              beginAtZero: false,
+                            },
+                          },
+                          interaction: {
+                            mode: 'nearest' as const,
+                            axis: 'x' as const,
+                            intersect: false,
+                          },
+                        }}
+                      />
+                    </Box>
+                  </CardContent>
+                </Card>
+              )}
+
+              {/* Delta Percentage Chart */}
+              {periodAResults.trends && periodBResults.trends && (
+                <Card>
+                  <CardContent>
+                    <Typography variant="subtitle1" gutterBottom>
+                      Percentage Change by Metric
+                    </Typography>
+                    <Box sx={{ height: 350 }}>
+                      <Bar
+                        data={{
+                          labels: Object.keys(periodAResults.trends).map(key => 
+                            key.replace(/_/g, ' ').toUpperCase()
+                          ),
+                          datasets: [
+                            {
+                              label: '% Change',
+                              data: Object.keys(periodAResults.trends).map(key => {
+                                const valueA = periodAResults.trends[key]?.latest_value;
+                                const valueB = periodBResults.trends[key]?.latest_value;
+                                const delta = calculateDelta(valueA, valueB);
+                                return delta.percentage;
+                              }),
+                              backgroundColor: Object.keys(periodAResults.trends).map(key => {
+                                const valueA = periodAResults.trends[key]?.latest_value;
+                                const valueB = periodBResults.trends[key]?.latest_value;
+                                const delta = calculateDelta(valueA, valueB);
+                                return delta.direction === 'up' 
+                                  ? 'rgba(76, 175, 80, 0.6)' 
+                                  : delta.direction === 'down'
+                                  ? 'rgba(244, 67, 54, 0.6)'
+                                  : 'rgba(158, 158, 158, 0.6)';
+                              }),
+                              borderColor: Object.keys(periodAResults.trends).map(key => {
+                                const valueA = periodAResults.trends[key]?.latest_value;
+                                const valueB = periodBResults.trends[key]?.latest_value;
+                                const delta = calculateDelta(valueA, valueB);
+                                return delta.direction === 'up' 
+                                  ? 'rgba(76, 175, 80, 1)' 
+                                  : delta.direction === 'down'
+                                  ? 'rgba(244, 67, 54, 1)'
+                                  : 'rgba(158, 158, 158, 1)';
+                              }),
+                              borderWidth: 2,
+                            },
+                          ],
+                        }}
+                        options={{
+                          responsive: true,
+                          maintainAspectRatio: false,
+                          plugins: {
+                            legend: {
+                              display: false,
+                            },
+                            tooltip: {
+                              callbacks: {
+                                label: function(context) {
+                                  return `Change: ${context.parsed.y >= 0 ? '+' : ''}${context.parsed.y.toFixed(2)}%`;
+                                },
+                              },
+                            },
+                          },
+                          scales: {
+                            y: {
+                              beginAtZero: true,
+                              ticks: {
+                                callback: function(value) {
+                                  return value + '%';
+                                },
+                              },
+                            },
+                          },
+                        }}
+                      />
+                    </Box>
+                  </CardContent>
+                </Card>
+              )}
+            </Box>
+
             {/* Insights Summary */}
             <Box>
               <Typography variant="h6" gutterBottom sx={{ display: 'flex', alignItems: 'center' }}>
@@ -2153,6 +2421,124 @@ Upload CSV or Excel files with your business data to get started.`}
             startIcon={<Share />}
           >
             Send Report
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Export Template Configuration Dialog */}
+      <Dialog
+        open={exportTemplateDialogOpen}
+        onClose={() => setExportTemplateDialogOpen(false)}
+        maxWidth="sm"
+        fullWidth
+      >
+        <DialogTitle>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+            <Settings color="primary" />
+            <Typography variant="h6">Configure Export Template</Typography>
+          </Box>
+        </DialogTitle>
+        <DialogContent>
+          <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
+            Select which sections to include in your exported reports. Your preferences will be saved for future exports.
+          </Typography>
+          
+          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+            <FormControlLabel
+              control={
+                <Checkbox
+                  checked={exportTemplate.includeTrends}
+                  onChange={(e) => setExportTemplate({ ...exportTemplate, includeTrends: e.target.checked })}
+                  color="primary"
+                />
+              }
+              label={
+                <Box>
+                  <Typography variant="body2">Trend Analysis</Typography>
+                  <Typography variant="caption" color="text.secondary">
+                    Historical trends and metric changes
+                  </Typography>
+                </Box>
+              }
+            />
+            
+            <FormControlLabel
+              control={
+                <Checkbox
+                  checked={exportTemplate.includePredictions}
+                  onChange={(e) => setExportTemplate({ ...exportTemplate, includePredictions: e.target.checked })}
+                  color="primary"
+                />
+              }
+              label={
+                <Box>
+                  <Typography variant="body2">Predictions</Typography>
+                  <Typography variant="caption" color="text.secondary">
+                    7-day ML forecasts
+                  </Typography>
+                </Box>
+              }
+            />
+            
+            <FormControlLabel
+              control={
+                <Checkbox
+                  checked={exportTemplate.includeInsights}
+                  onChange={(e) => setExportTemplate({ ...exportTemplate, includeInsights: e.target.checked })}
+                  color="primary"
+                />
+              }
+              label={
+                <Box>
+                  <Typography variant="body2">AI Insights</Typography>
+                  <Typography variant="caption" color="text.secondary">
+                    Seasonality, correlations, and anomalies
+                  </Typography>
+                </Box>
+              }
+            />
+            
+            <FormControlLabel
+              control={
+                <Checkbox
+                  checked={exportTemplate.includeRecommendations}
+                  onChange={(e) => setExportTemplate({ ...exportTemplate, includeRecommendations: e.target.checked })}
+                  color="primary"
+                />
+              }
+              label={
+                <Box>
+                  <Typography variant="body2">Recommendations</Typography>
+                  <Typography variant="caption" color="text.secondary">
+                    Actionable business recommendations
+                  </Typography>
+                </Box>
+              }
+            />
+
+            <Divider sx={{ my: 1 }} />
+            
+            <Alert severity="info" icon={<Description />}>
+              <Typography variant="body2">
+                💾 Your template preferences will be used for CSV and PDF exports
+              </Typography>
+            </Alert>
+          </Box>
+        </DialogContent>
+        <DialogActions sx={{ px: 3, pb: 2 }}>
+          <Button onClick={() => setExportTemplateDialogOpen(false)}>
+            Cancel
+          </Button>
+          <Button
+            variant="contained"
+            onClick={() => {
+              // Save template to localStorage for persistence
+              localStorage.setItem('exportTemplate', JSON.stringify(exportTemplate));
+              setExportTemplateDialogOpen(false);
+            }}
+            startIcon={<Settings />}
+          >
+            Save Template
           </Button>
         </DialogActions>
       </Dialog>
