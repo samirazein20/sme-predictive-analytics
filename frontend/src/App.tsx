@@ -32,7 +32,9 @@ import {
   Analytics, 
   Computer,
   CheckCircle,
-  Info
+  Info,
+  ShowChart,
+  Assessment
 } from '@mui/icons-material';
 import { apiService, FileAnalysisResponse, AnalysisResult } from './services/apiService';
 import { 
@@ -41,6 +43,8 @@ import {
   explainInsight, 
   generateOverallSummary
 } from './utils/explanationGenerator';
+import { EmptyState } from './components/EmptyState';
+import { DragDropUpload } from './components/DragDropUpload';
 
 const theme = createTheme({
   palette: {
@@ -62,10 +66,15 @@ interface TabPanelProps {
 
 function TabPanel(props: TabPanelProps) {
   const { children, value, index, ...other } = props;
+  const panelIds = ['overview', 'upload', 'predictions', 'analytics'];
+  const panelId = panelIds[index] || `panel-${index}`;
+  
   return (
     <div
       role="tabpanel"
       hidden={value !== index}
+      id={`panel-${panelId}`}
+      aria-labelledby={`tab-${panelId}`}
       {...other}
     >
       {value === index && <Box sx={{ p: 3 }}>{children}</Box>}
@@ -147,10 +156,13 @@ const Dashboard: React.FC = () => {
     setActiveTab(newValue);
   };
 
-  const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
+  const handleFilesDrop = async (files: FileList) => {
+    const file = files[0];
     if (!file) return;
+    await processFileUpload(file);
+  };
 
+  const processFileUpload = async (file: File) => {
     setIsUploading(true);
     setUploadError(null);
 
@@ -194,8 +206,8 @@ const Dashboard: React.FC = () => {
 
   const renderOverview = () => (
     <>
-      <Typography variant="h4" component="h1" gutterBottom>
-        SME Predictive Analytics Platform
+      <Typography variant="h2" component="h2" gutterBottom>
+        Overview Dashboard
       </Typography>
       
       <Grid container spacing={3} sx={{ mb: 3 }}>
@@ -204,12 +216,12 @@ const Dashboard: React.FC = () => {
             <CardContent>
               <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
                 <CloudUpload color="primary" sx={{ mr: 2 }} />
-                <Typography variant="h6">Data Upload</Typography>
+                <Typography variant="h6" component="h3">Data Upload</Typography>
               </Box>
               <Typography variant="body2" color="text.secondary">
                 Upload CSV/Excel files for analysis
               </Typography>
-              <Typography variant="h4" color="primary" sx={{ mt: 2 }}>
+              <Typography variant="h3" component="div" color="primary" sx={{ mt: 2, fontSize: '2.125rem' }} aria-label={`${uploadedFiles.length} files uploaded`}>
                 {uploadedFiles.length}
               </Typography>
               <Typography variant="caption" color="text.secondary">
@@ -224,12 +236,12 @@ const Dashboard: React.FC = () => {
             <CardContent>
               <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
                 <TrendingUp color="primary" sx={{ mr: 2 }} />
-                <Typography variant="h6">ML Predictions</Typography>
+                <Typography variant="h6" component="h3">ML Predictions</Typography>
               </Box>
               <Typography variant="body2" color="text.secondary">
                 Generate AI-powered forecasts
               </Typography>
-              <Typography variant="h4" color="primary" sx={{ mt: 2 }}>
+              <Typography variant="h3" component="div" color="primary" sx={{ mt: 2, fontSize: '2.125rem' }} aria-label={`${analysisResults?.predictions?.length || 0} active predictions`}>
                 {analysisResults?.predictions?.length || 0}
               </Typography>
               <Typography variant="caption" color="text.secondary">
@@ -244,12 +256,12 @@ const Dashboard: React.FC = () => {
             <CardContent>
               <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
                 <Analytics color="primary" sx={{ mr: 2 }} />
-                <Typography variant="h6">Analytics</Typography>
+                <Typography variant="h6" component="h3">Analytics</Typography>
               </Box>
               <Typography variant="body2" color="text.secondary">
                 View insights and reports
               </Typography>
-              <Typography variant="h4" color="primary" sx={{ mt: 2 }}>
+              <Typography variant="h3" component="div" color="primary" sx={{ mt: 2, fontSize: '2.125rem' }} aria-label="Unlimited insights available">
                 ∞
               </Typography>
               <Typography variant="caption" color="text.secondary">
@@ -264,7 +276,7 @@ const Dashboard: React.FC = () => {
             <CardContent>
               <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
                 <Computer color="primary" sx={{ mr: 2 }} />
-                <Typography variant="h6">System Status</Typography>
+                <Typography variant="h6" component="h3">System Status</Typography>
               </Box>
               <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
                 Service health status
@@ -291,7 +303,7 @@ const Dashboard: React.FC = () => {
         </Grid>
       </Grid>
 
-      <Alert severity="success" sx={{ mb: 3 }}>
+      <Alert severity="success" sx={{ mb: 3 }} role="status" aria-live="polite">
         🎉 All services are running successfully! Your interactive analytics platform is ready to use.
       </Alert>
     </>
@@ -299,7 +311,7 @@ const Dashboard: React.FC = () => {
 
   const renderUpload = () => (
     <Paper sx={{ p: 3 }}>
-      <Typography variant="h5" gutterBottom>
+      <Typography variant="h2" component="h2" gutterBottom>
         Data Upload
       </Typography>
       <Typography variant="body1" paragraph>
@@ -321,30 +333,16 @@ const Dashboard: React.FC = () => {
         </Alert>
       )}
       
-      <Box sx={{ mb: 2 }}>
-        <Button 
-          variant="contained" 
-          component="label"
-          startIcon={<CloudUpload />}
-          sx={{ mr: 2 }}
-          disabled={isUploading || isAnalyzing || isRestoring}
-        >
-          {isUploading ? 'Uploading...' : 'Choose File'}
-          <input 
-            type="file" 
-            hidden 
-            accept=".csv,.xlsx,.xls" 
-            ref={fileInputRef}
-            onChange={handleFileUpload}
-          />
-        </Button>
-        <Button variant="outlined" onClick={handleClearFiles} disabled={uploadedFiles.length === 0}>
-          Clear Files
-        </Button>
-      </Box>
+      <DragDropUpload
+        onFilesDrop={handleFilesDrop}
+        accept=".csv,.xlsx,.xls"
+        maxSize={50 * 1024 * 1024}
+        disabled={isRestoring}
+        isUploading={isUploading || isAnalyzing}
+      />
 
       {(isUploading || isAnalyzing) && (
-        <Box sx={{ mb: 2 }}>
+        <Box sx={{ mt: 2 }}>
           <LinearProgress />
           <Typography variant="caption" sx={{ mt: 1, display: 'block' }}>
             {isUploading ? 'Uploading file...' : 'Analyzing data with AI...'}
@@ -352,9 +350,15 @@ const Dashboard: React.FC = () => {
         </Box>
       )}
 
-      <Typography variant="caption" display="block" sx={{ mt: 2 }}>
-        Supported formats: CSV, Excel (.xlsx, .xls) | Max size: 50MB
-      </Typography>
+      <Box sx={{ mt: 2, display: 'flex', justifyContent: 'flex-end' }}>
+        <Button 
+          variant="outlined" 
+          onClick={handleClearFiles} 
+          disabled={uploadedFiles.length === 0 || isUploading || isAnalyzing}
+        >
+          Clear Files
+        </Button>
+      </Box>
 
       {uploadError && (
         <Alert severity="error" sx={{ mt: 2 }}>
@@ -430,7 +434,7 @@ const Dashboard: React.FC = () => {
     <Paper sx={{ p: 3 }}>
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
         <Box>
-          <Typography variant="h5" gutterBottom>
+          <Typography variant="h2" component="h2" gutterBottom>
             ML Predictions
           </Typography>
           <Typography variant="body1" color="text.secondary">
@@ -453,7 +457,7 @@ const Dashboard: React.FC = () => {
         <Box>
           {/* Overall Summary in Plain Language */}
           {usePlainLanguage && (
-            <Alert severity="info" sx={{ mb: 3 }}>
+            <Alert severity="info" sx={{ mb: 3 }} role="region" aria-label="Analysis summary">
               <Typography variant="body1" sx={{ whiteSpace: 'pre-line' }}>
                 {generateOverallSummary(analysisResults)}
               </Typography>
@@ -627,16 +631,26 @@ const Dashboard: React.FC = () => {
           </Grid>
         </Box>
       ) : (
-        <Alert severity="warning">
-          Upload and analyze data first to see predictions and insights.
-        </Alert>
+        <EmptyState
+          icon={<ShowChart />}
+          title="No Predictions Yet"
+          description={`To generate AI-powered forecasts:
+
+1. Upload your data in the "Upload Data" tab
+2. Click "Analyze" to process your data
+3. Return here to see your predictions
+
+Your predictions will include trends, forecasts, and actionable business insights.`}
+          actionLabel="Go to Upload Data"
+          onAction={() => setActiveTab(1)}
+        />
       )}
     </Paper>
   );
 
   const renderAnalytics = () => (
     <Paper sx={{ p: 3 }}>
-      <Typography variant="h5" gutterBottom>
+      <Typography variant="h2" component="h2" gutterBottom>
         Analytics Dashboard
       </Typography>
       <Typography variant="body1" paragraph>
@@ -769,39 +783,21 @@ const Dashboard: React.FC = () => {
           </Grid>
         </Grid>
       ) : (
-        <Grid container spacing={3}>
-          <Grid item xs={12} md={6}>
-            <Paper sx={{ p: 2, textAlign: 'center', minHeight: 200, display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
-              <Typography variant="h6" gutterBottom>📈 Charts & Visualizations</Typography>
-              <Typography variant="body2" color="text.secondary">
-                Upload data to see interactive charts and trend analysis
-              </Typography>
-            </Paper>
-          </Grid>
-          <Grid item xs={12} md={6}>
-            <Paper sx={{ p: 2, textAlign: 'center', minHeight: 200, display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
-              <Typography variant="h6" gutterBottom>📊 Statistical Analysis</Typography>
-              <Typography variant="body2" color="text.secondary">
-                Advanced statistics and correlations will appear here
-              </Typography>
-            </Paper>
-          </Grid>
-          <Grid item xs={12}>
-            <Paper sx={{ p: 2, textAlign: 'center', minHeight: 150, display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
-              <Typography variant="h6" gutterBottom>🎯 Get Started</Typography>
-              <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-                Upload your data files to unlock powerful analytics and AI insights
-              </Typography>
-              <Button 
-                variant="contained" 
-                onClick={() => setActiveTab(1)}
-                startIcon={<CloudUpload />}
-              >
-                Go to Upload
-              </Button>
-            </Paper>
-          </Grid>
-        </Grid>
+        <EmptyState
+          icon={<Assessment />}
+          title="No Data to Analyze"
+          description={`Your analytics dashboard is waiting for data.
+
+What you'll get once you upload:
+• Interactive charts and visualizations
+• Statistical analysis and correlations  
+• Trend identification and patterns
+• Historical data insights
+
+Upload CSV or Excel files with your business data to get started.`}
+          actionLabel="Upload Data Now"
+          onAction={() => setActiveTab(1)}
+        />
       )}
     </Paper>
   );
@@ -819,11 +815,32 @@ const Dashboard: React.FC = () => {
           value={activeTab} 
           onChange={handleTabChange}
           sx={{ borderTop: 1, borderColor: 'divider' }}
+          aria-label="Analytics platform navigation tabs"
         >
-          <Tab label="🏠 Overview" />
-          <Tab label="📁 Upload Data" />
-          <Tab label="🤖 Predictions" />
-          <Tab label="📊 Analytics" />
+          <Tab 
+            label="🏠 Overview" 
+            id="tab-overview"
+            aria-controls="panel-overview"
+            aria-label="Overview dashboard tab"
+          />
+          <Tab 
+            label="📁 Upload Data" 
+            id="tab-upload"
+            aria-controls="panel-upload"
+            aria-label="Upload data files tab"
+          />
+          <Tab 
+            label="🤖 Predictions" 
+            id="tab-predictions"
+            aria-controls="panel-predictions"
+            aria-label="View ML predictions tab"
+          />
+          <Tab 
+            label="📊 Analytics" 
+            id="tab-analytics"
+            aria-controls="panel-analytics"
+            aria-label="View analytics dashboard tab"
+          />
         </Tabs>
       </AppBar>
 
