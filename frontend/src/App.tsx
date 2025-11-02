@@ -132,6 +132,15 @@ const theme = createTheme({
   },
 });
 
+// Color palette for multi-period visualization
+const PERIOD_COLORS = [
+  { primary: '#1976d2', light: 'rgba(25, 118, 210, 0.6)', lighter: 'rgba(25, 118, 210, 0.1)' }, // Blue
+  { primary: '#9c27b0', light: 'rgba(156, 39, 176, 0.6)', lighter: 'rgba(156, 39, 176, 0.1)' }, // Purple
+  { primary: '#f57c00', light: 'rgba(245, 124, 0, 0.6)', lighter: 'rgba(245, 124, 0, 0.1)' },  // Orange
+  { primary: '#388e3c', light: 'rgba(56, 142, 60, 0.6)', lighter: 'rgba(56, 142, 60, 0.1)' },  // Green
+  { primary: '#d32f2f', light: 'rgba(211, 47, 47, 0.6)', lighter: 'rgba(211, 47, 47, 0.1)' },  // Red
+];
+
 interface TabPanelProps {
   children?: React.ReactNode;
   index: number;
@@ -195,15 +204,46 @@ const Dashboard: React.FC = () => {
     includeCharts: false, // Optional for future chart export
   });
 
-  // Comparison Mode state
-  const [periodAFiles, setPeriodAFiles] = useState<FileAnalysisResponse[]>([]);
-  const [periodBFiles, setPeriodBFiles] = useState<FileAnalysisResponse[]>([]);
-  const [periodAResults, setPeriodAResults] = useState<AnalysisResult | null>(null);
-  const [periodBResults, setPeriodBResults] = useState<AnalysisResult | null>(null);
-  const [periodADate, setPeriodADate] = useState<Dayjs | null>(dayjs().subtract(1, 'month'));
-  const [periodBDate, setPeriodBDate] = useState<Dayjs | null>(dayjs());
-  const fileInputRefPeriodA = useRef<HTMLInputElement>(null);
-  const fileInputRefPeriodB = useRef<HTMLInputElement>(null);
+  // Comparison Mode state - Multi-period support
+  interface Period {
+    id: string;
+    label: string;
+    date: Dayjs | null;
+    files: FileAnalysisResponse[];
+    results: AnalysisResult | null;
+    fileInputRef: React.RefObject<HTMLInputElement>;
+  }
+
+  const [periods, setPeriods] = useState<Period[]>([
+    {
+      id: 'period-1',
+      label: 'Period 1',
+      date: dayjs().subtract(2, 'month'),
+      files: [],
+      results: null,
+      fileInputRef: React.createRef<HTMLInputElement>(),
+    },
+    {
+      id: 'period-2',
+      label: 'Period 2',
+      date: dayjs().subtract(1, 'month'),
+      files: [],
+      results: null,
+      fileInputRef: React.createRef<HTMLInputElement>(),
+    },
+    {
+      id: 'period-3',
+      label: 'Period 3',
+      date: dayjs(),
+      files: [],
+      results: null,
+      fileInputRef: React.createRef<HTMLInputElement>(),
+    },
+  ]);
+  
+  // Keep legacy state for backward compatibility with existing comparison results code
+  const periodAResults = periods[0]?.results || null;
+  const periodBResults = periods[1]?.results || null;
 
   // Schedule Management state
   const [schedules, setSchedules] = useState<any[]>([]);
@@ -664,8 +704,8 @@ const Dashboard: React.FC = () => {
     setEmailAddress('');
   };
 
-  // Comparison Mode Handlers
-  const handlePeriodAUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+  // Multi-Period Management Functions
+  const handlePeriodUpload = async (periodIndex: number, event: React.ChangeEvent<HTMLInputElement>) => {
     const files = event.target.files;
     if (!files || files.length === 0) return;
 
@@ -688,9 +728,8 @@ const Dashboard: React.FC = () => {
       }
 
       const data = await response.json();
-      setPeriodAFiles(data.files);
       
-      // Automatically analyze Period A data
+      // Automatically analyze the data
       const analysisResponse = await fetch('http://localhost:5000/api/analyze', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -699,62 +738,75 @@ const Dashboard: React.FC = () => {
         })
       });
 
+      let analysisData: AnalysisResult | null = null;
       if (analysisResponse.ok) {
-        const analysisData = await analysisResponse.json();
-        setPeriodAResults(analysisData);
+        analysisData = await analysisResponse.json();
       }
+
+      // Update the specific period
+      setPeriods(prevPeriods => {
+        const newPeriods = [...prevPeriods];
+        newPeriods[periodIndex] = {
+          ...newPeriods[periodIndex],
+          files: data.files,
+          results: analysisData,
+        };
+        return newPeriods;
+      });
+
     } catch (error) {
-      setUploadError('Failed to upload files for Period A. Please try again.');
-      console.error('Period A upload error:', error);
+      setUploadError(`Failed to upload files for ${periods[periodIndex].label}. Please try again.`);
+      console.error('Period upload error:', error);
     } finally {
       setIsUploading(false);
     }
   };
 
-  const handlePeriodBUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
-    const files = event.target.files;
-    if (!files || files.length === 0) return;
+  const addPeriod = () => {
+    const newPeriodNumber = periods.length + 1;
+    const newPeriod: Period = {
+      id: `period-${newPeriodNumber}`,
+      label: `Period ${newPeriodNumber}`,
+      date: dayjs().subtract(periods.length, 'month'),
+      files: [],
+      results: null,
+      fileInputRef: React.createRef<HTMLInputElement>(),
+    };
+    setPeriods([...periods, newPeriod]);
+  };
 
-    setIsUploading(true);
-    setUploadError(null);
-
-    const formData = new FormData();
-    Array.from(files).forEach(file => {
-      formData.append('files', file);
-    });
-
-    try {
-      const response = await fetch('http://localhost:5000/api/upload', {
-        method: 'POST',
-        body: formData,
+  const removePeriod = (periodIndex: number) => {
+    if (periods.length <= 2) {
+      setSnackbar({
+        open: true,
+        message: 'You must have at least 2 periods for comparison',
+        severity: 'warning'
       });
-
-      if (!response.ok) {
-        throw new Error('Upload failed');
-      }
-
-      const data = await response.json();
-      setPeriodBFiles(data.files);
-      
-      // Automatically analyze Period B data
-      const analysisResponse = await fetch('http://localhost:5000/api/analyze', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          file_ids: data.files.map((f: FileAnalysisResponse) => f.sessionId)
-        })
-      });
-
-      if (analysisResponse.ok) {
-        const analysisData = await analysisResponse.json();
-        setPeriodBResults(analysisData);
-      }
-    } catch (error) {
-      setUploadError('Failed to upload files for Period B. Please try again.');
-      console.error('Period B upload error:', error);
-    } finally {
-      setIsUploading(false);
+      return;
     }
+    setPeriods(periods.filter((_, index) => index !== periodIndex));
+  };
+
+  const updatePeriodDate = (periodIndex: number, newDate: Dayjs | null) => {
+    setPeriods(prevPeriods => {
+      const newPeriods = [...prevPeriods];
+      newPeriods[periodIndex] = {
+        ...newPeriods[periodIndex],
+        date: newDate,
+      };
+      return newPeriods;
+    });
+  };
+
+  const updatePeriodLabel = (periodIndex: number, newLabel: string) => {
+    setPeriods(prevPeriods => {
+      const newPeriods = [...prevPeriods];
+      newPeriods[periodIndex] = {
+        ...newPeriods[periodIndex],
+        label: newLabel,
+      };
+      return newPeriods;
+    });
   };
 
   const calculateDelta = (valueA: number | undefined, valueB: number | undefined): { value: number; percentage: number; direction: 'up' | 'down' | 'neutral' } => {
@@ -767,6 +819,36 @@ const Dashboard: React.FC = () => {
     const direction = delta > 0 ? 'up' : delta < 0 ? 'down' : 'neutral';
     
     return { value: delta, percentage, direction };
+  };
+
+  // Multi-period delta calculation
+  const calculateMultiPeriodDeltas = (metricKey: string) => {
+    const deltas: Array<{
+      fromPeriod: string;
+      toPeriod: string;
+      value: number;
+      percentage: number;
+      direction: 'up' | 'down' | 'neutral';
+    }> = [];
+
+    for (let i = 0; i < periods.length - 1; i++) {
+      const periodA = periods[i];
+      const periodB = periods[i + 1];
+      
+      if (periodA.results?.trends && periodB.results?.trends) {
+        const valueA = periodA.results.trends[metricKey]?.latest_value;
+        const valueB = periodB.results.trends[metricKey]?.latest_value;
+        const delta = calculateDelta(valueA, valueB);
+        
+        deltas.push({
+          fromPeriod: periodA.label,
+          toPeriod: periodB.label,
+          ...delta,
+        });
+      }
+    }
+
+    return deltas;
   };
 
   // Schedule Management Functions
@@ -1859,142 +1941,142 @@ Upload CSV or Excel files with your business data to get started.`}
     <LocalizationProvider dateAdapter={AdapterDayjs}>
       <Paper sx={{ p: 3 }}>
         <Box sx={{ mb: 4 }}>
-          <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
-            <Compare sx={{ fontSize: 40, color: 'primary.main', mr: 2 }} />
-            <Box>
-              <Typography variant="h5" gutterBottom>
-                Compare Time Periods
-              </Typography>
-              <Typography variant="body2" color="text.secondary">
-                Upload data from two different time periods to see how your business metrics have changed
-              </Typography>
+          <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 2 }}>
+            <Box sx={{ display: 'flex', alignItems: 'center' }}>
+              <Compare sx={{ fontSize: 40, color: 'primary.main', mr: 2 }} />
+              <Box>
+                <Typography variant="h5" gutterBottom>
+                  Compare Multiple Time Periods
+                </Typography>
+                <Typography variant="body2" color="text.secondary">
+                  Upload data from multiple time periods to track how your business metrics evolve over time
+                </Typography>
+              </Box>
             </Box>
+            <Button
+              variant="contained"
+              startIcon={<Add />}
+              onClick={addPeriod}
+              disabled={periods.length >= 5}
+              size="small"
+            >
+              Add Period
+            </Button>
           </Box>
 
           <Alert severity="info" sx={{ mb: 3 }}>
             <Typography variant="body2">
-              💡 <strong>How it works:</strong> Upload data from Period A (e.g., last month) and Period B (e.g., this month) to compare metrics side-by-side with automatic delta calculations.
+              💡 <strong>Multi-period comparison:</strong> Compare {periods.length} periods side-by-side. Add up to 5 periods to track long-term trends and identify patterns in your business metrics.
             </Typography>
           </Alert>
         </Box>
 
         <Grid container spacing={3}>
-          {/* Period A Upload */}
-          <Grid item xs={12} md={6}>
-            <Card sx={{ height: '100%', borderLeft: 4, borderColor: 'primary.main' }}>
-              <CardContent>
-                <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
-                  <CalendarToday sx={{ mr: 1, color: 'primary.main' }} />
-                  <Typography variant="h6">Period A (Earlier)</Typography>
-                </Box>
+          {/* Dynamic Period Cards */}
+          {periods.map((period, index) => {
+            // Color palette for multiple periods
+            const colors = [
+              { border: '#1976d2', bg: 'rgba(25, 118, 210, 0.1)' }, // Blue
+              { border: '#9c27b0', bg: 'rgba(156, 39, 176, 0.1)' }, // Purple
+              { border: '#f57c00', bg: 'rgba(245, 124, 0, 0.1)' }, // Orange
+              { border: '#388e3c', bg: 'rgba(56, 142, 60, 0.1)' }, // Green
+              { border: '#d32f2f', bg: 'rgba(211, 47, 47, 0.1)' }, // Red
+            ];
+            const color = colors[index % colors.length];
 
-                <DatePicker
-                  label="Period A Date"
-                  value={periodADate}
-                  onChange={(newValue) => setPeriodADate(newValue)}
-                  sx={{ width: '100%', mb: 2 }}
-                />
+            return (
+              <Grid item xs={12} md={periods.length <= 2 ? 6 : periods.length <= 3 ? 4 : 3} key={period.id}>
+                <Card sx={{ height: '100%', borderLeft: 4, borderColor: color.border, bgcolor: color.bg }}>
+                  <CardContent>
+                    <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 2 }}>
+                      <Box sx={{ display: 'flex', alignItems: 'center', flex: 1 }}>
+                        <CalendarToday sx={{ mr: 1, color: color.border }} />
+                        <TextField
+                          value={period.label}
+                          onChange={(e) => updatePeriodLabel(index, e.target.value)}
+                          variant="standard"
+                          size="small"
+                          sx={{ 
+                            '& .MuiInput-input': { 
+                              fontWeight: 600,
+                              fontSize: '1.1rem'
+                            } 
+                          }}
+                        />
+                      </Box>
+                      {periods.length > 2 && (
+                        <IconButton 
+                          size="small" 
+                          onClick={() => removePeriod(index)}
+                          color="error"
+                        >
+                          <Close fontSize="small" />
+                        </IconButton>
+                      )}
+                    </Box>
 
-                <input
-                  ref={fileInputRefPeriodA}
-                  type="file"
-                  multiple
-                  accept=".csv,.xlsx,.xls"
-                  onChange={handlePeriodAUpload}
-                  style={{ display: 'none' }}
-                />
+                    <DatePicker
+                      label={`${period.label} Date`}
+                      value={period.date}
+                      onChange={(newValue) => updatePeriodDate(index, newValue)}
+                      sx={{ width: '100%', mb: 2 }}
+                      slotProps={{
+                        textField: { size: 'small' }
+                      }}
+                    />
 
-                <Button
-                  variant="outlined"
-                  fullWidth
-                  onClick={() => fileInputRefPeriodA.current?.click()}
-                  disabled={isUploading}
-                  sx={{ mb: 2 }}
-                >
-                  <CloudUpload sx={{ mr: 1 }} />
-                  Upload Period A Data
-                </Button>
+                    <input
+                      ref={period.fileInputRef}
+                      type="file"
+                      multiple
+                      accept=".csv,.xlsx,.xls"
+                      onChange={(e) => handlePeriodUpload(index, e)}
+                      style={{ display: 'none' }}
+                    />
 
-                {periodAFiles.length > 0 && (
-                  <Box>
-                    <Typography variant="body2" color="success.main" gutterBottom>
-                      ✅ {periodAFiles.length} file(s) uploaded
-                    </Typography>
-                    {periodAResults && (
-                      <Chip 
-                        label="Analysis Complete" 
-                        color="success" 
-                        size="small" 
-                        icon={<CheckCircle />}
-                      />
+                    <Button
+                      variant="outlined"
+                      fullWidth
+                      onClick={() => period.fileInputRef.current?.click()}
+                      disabled={isUploading}
+                      sx={{ mb: 2 }}
+                      size="small"
+                    >
+                      <CloudUpload sx={{ mr: 1 }} />
+                      Upload Data
+                    </Button>
+
+                    {period.files.length > 0 && (
+                      <Box>
+                        <Typography variant="body2" color="success.main" gutterBottom>
+                          ✅ {period.files.length} file(s) uploaded
+                        </Typography>
+                        {period.results && (
+                          <Chip 
+                            label="Analysis Complete" 
+                            color="success" 
+                            size="small" 
+                            icon={<CheckCircle />}
+                          />
+                        )}
+                      </Box>
                     )}
-                  </Box>
-                )}
-              </CardContent>
-            </Card>
-          </Grid>
-
-          {/* Period B Upload */}
-          <Grid item xs={12} md={6}>
-            <Card sx={{ height: '100%', borderLeft: 4, borderColor: 'secondary.main' }}>
-              <CardContent>
-                <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
-                  <CalendarToday sx={{ mr: 1, color: 'secondary.main' }} />
-                  <Typography variant="h6">Period B (Later)</Typography>
-                </Box>
-
-                <DatePicker
-                  label="Period B Date"
-                  value={periodBDate}
-                  onChange={(newValue) => setPeriodBDate(newValue)}
-                  sx={{ width: '100%', mb: 2 }}
-                />
-
-                <input
-                  ref={fileInputRefPeriodB}
-                  type="file"
-                  multiple
-                  accept=".csv,.xlsx,.xls"
-                  onChange={handlePeriodBUpload}
-                  style={{ display: 'none' }}
-                />
-
-                <Button
-                  variant="outlined"
-                  fullWidth
-                  onClick={() => fileInputRefPeriodB.current?.click()}
-                  disabled={isUploading}
-                  sx={{ mb: 2 }}
-                >
-                  <CloudUpload sx={{ mr: 1 }} />
-                  Upload Period B Data
-                </Button>
-
-                {periodBFiles.length > 0 && (
-                  <Box>
-                    <Typography variant="body2" color="success.main" gutterBottom>
-                      ✅ {periodBFiles.length} file(s) uploaded
-                    </Typography>
-                    {periodBResults && (
-                      <Chip 
-                        label="Analysis Complete" 
-                        color="success" 
-                        size="small" 
-                        icon={<CheckCircle />}
-                      />
-                    )}
-                  </Box>
-                )}
-              </CardContent>
-            </Card>
-          </Grid>
+                  </CardContent>
+                </Card>
+              </Grid>
+            );
+          })}
         </Grid>
 
         {/* Comparison Results */}
         {periodAResults && periodBResults && (
           <Box sx={{ mt: 4 }}>
             <Divider sx={{ mb: 3 }}>
-              <Chip icon={<Compare />} label="COMPARISON RESULTS" color="primary" />
+              <Chip 
+                icon={<Compare />} 
+                label={periods.length > 2 ? `COMPARISON RESULTS (${periods.filter(p => p.results).length} PERIODS)` : "COMPARISON RESULTS"} 
+                color="primary" 
+              />
             </Divider>
 
             {/* Trends Comparison */}
@@ -2102,36 +2184,32 @@ Upload CSV or Excel files with your business data to get started.`}
                 Visual Comparison
               </Typography>
               
-              {/* Metrics Bar Chart */}
-              {periodAResults.trends && periodBResults.trends && (
-                <Card sx={{ mb: 3 }}>
-                  <CardContent>
-                    <Typography variant="subtitle1" gutterBottom>
-                      Metrics Comparison (Side-by-Side)
-                    </Typography>
-                    <Box sx={{ height: 400 }}>
-                      <Bar
-                        data={{
-                          labels: Object.keys(periodAResults.trends).map(key => 
-                            key.replace(/_/g, ' ').toUpperCase()
-                          ),
-                          datasets: [
-                            {
-                              label: `Period A (${periodADate?.format('MMM YYYY')})`,
-                              data: Object.values(periodAResults.trends).map((trend: any) => trend.latest_value || 0),
-                              backgroundColor: 'rgba(33, 150, 243, 0.6)',
-                              borderColor: 'rgba(33, 150, 243, 1)',
+              {/* Multi-Period Metrics Bar Chart */}
+              {periods.filter(p => p.results?.trends).length >= 2 && (() => {
+                const periodsWithTrends = periods.filter(p => p.results?.trends);
+                const firstPeriod = periodsWithTrends[0];
+                if (!firstPeriod.results?.trends) return null;
+                
+                return (
+                  <Card sx={{ mb: 3 }}>
+                    <CardContent>
+                      <Typography variant="subtitle1" gutterBottom>
+                        Metrics Comparison ({periodsWithTrends.length} Periods)
+                      </Typography>
+                      <Box sx={{ height: 400 }}>
+                        <Bar
+                          data={{
+                            labels: Object.keys(firstPeriod.results.trends).map(key => 
+                              key.replace(/_/g, ' ').toUpperCase()
+                            ),
+                            datasets: periodsWithTrends.map((period, index) => ({
+                              label: `${period.label} (${period.date?.format('MMM YYYY')})`,
+                              data: Object.values(period.results!.trends!).map((trend: any) => trend.latest_value || 0),
+                              backgroundColor: PERIOD_COLORS[index].light,
+                              borderColor: PERIOD_COLORS[index].primary,
                               borderWidth: 2,
-                            },
-                            {
-                              label: `Period B (${periodBDate?.format('MMM YYYY')})`,
-                              data: Object.values(periodBResults.trends).map((trend: any) => trend.latest_value || 0),
-                              backgroundColor: 'rgba(156, 39, 176, 0.6)',
-                              borderColor: 'rgba(156, 39, 176, 1)',
-                              borderWidth: 2,
-                            },
-                          ],
-                        }}
+                            })),
+                          }}
                         options={{
                           responsive: true,
                           maintainAspectRatio: false,
@@ -2153,42 +2231,34 @@ Upload CSV or Excel files with your business data to get started.`}
                     </Box>
                   </CardContent>
                 </Card>
-              )}
+                );
+              })()}
 
-              {/* Predictions Line Chart */}
-              {periodAResults.predictions && periodBResults.predictions && (
-                <Card sx={{ mb: 3 }}>
-                  <CardContent>
-                    <Typography variant="subtitle1" gutterBottom>
-                      Forecast Trends (7-Day Comparison)
-                    </Typography>
-                    <Box sx={{ height: 350 }}>
-                      <Line
-                        data={{
-                          labels: Array.from({ length: 7 }, (_, i) => `Day ${i + 1}`),
-                          datasets: [
-                            {
-                              label: `Period A Forecast`,
-                              data: periodAResults.predictions,
-                              borderColor: 'rgba(33, 150, 243, 1)',
-                              backgroundColor: 'rgba(33, 150, 243, 0.1)',
+              {/* Multi-Period Predictions Line Chart */}
+              {periods.filter(p => p.results?.predictions).length >= 2 && (() => {
+                const periodsWithPredictions = periods.filter(p => p.results?.predictions);
+                
+                return (
+                  <Card sx={{ mb: 3 }}>
+                    <CardContent>
+                      <Typography variant="subtitle1" gutterBottom>
+                        Forecast Trends ({periodsWithPredictions.length} Periods, 7-Day)
+                      </Typography>
+                      <Box sx={{ height: 350 }}>
+                        <Line
+                          data={{
+                            labels: Array.from({ length: 7 }, (_, i) => `Day ${i + 1}`),
+                            datasets: periodsWithPredictions.map((period, index) => ({
+                              label: `${period.label} Forecast`,
+                              data: period.results!.predictions!,
+                              borderColor: PERIOD_COLORS[index].primary,
+                              backgroundColor: PERIOD_COLORS[index].lighter,
                               tension: 0.4,
                               fill: true,
                               pointRadius: 5,
                               pointHoverRadius: 7,
-                            },
-                            {
-                              label: `Period B Forecast`,
-                              data: periodBResults.predictions,
-                              borderColor: 'rgba(156, 39, 176, 1)',
-                              backgroundColor: 'rgba(156, 39, 176, 0.1)',
-                              tension: 0.4,
-                              fill: true,
-                              pointRadius: 5,
-                              pointHoverRadius: 7,
-                            },
-                          ],
-                        }}
+                            })),
+                          }}
                         options={{
                           responsive: true,
                           maintainAspectRatio: false,
@@ -2216,7 +2286,8 @@ Upload CSV or Excel files with your business data to get started.`}
                     </Box>
                   </CardContent>
                 </Card>
-              )}
+                );
+              })()}
 
               {/* Delta Percentage Chart */}
               {periodAResults.trends && periodBResults.trends && (
