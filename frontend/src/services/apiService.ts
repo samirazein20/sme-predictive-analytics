@@ -171,6 +171,46 @@ class ApiService {
 
   clearSession(): void {
     localStorage.removeItem(this.SESSION_STORAGE_KEY);
+    localStorage.removeItem(`${this.SESSION_STORAGE_KEY}_files`);
+    localStorage.removeItem(`${this.SESSION_STORAGE_KEY}_predictions`);
+  }
+
+  // Persist uploaded files data
+  saveUploadedFiles(files: FileAnalysisResponse[]): void {
+    try {
+      localStorage.setItem(`${this.SESSION_STORAGE_KEY}_files`, JSON.stringify(files));
+    } catch (error) {
+      console.error('Failed to save uploaded files:', error);
+    }
+  }
+
+  getUploadedFiles(): FileAnalysisResponse[] | null {
+    try {
+      const data = localStorage.getItem(`${this.SESSION_STORAGE_KEY}_files`);
+      return data ? JSON.parse(data) : null;
+    } catch (error) {
+      console.error('Failed to retrieve uploaded files:', error);
+      return null;
+    }
+  }
+
+  // Persist predictions/analysis results
+  savePredictions(predictions: AnalysisResult): void {
+    try {
+      localStorage.setItem(`${this.SESSION_STORAGE_KEY}_predictions`, JSON.stringify(predictions));
+    } catch (error) {
+      console.error('Failed to save predictions:', error);
+    }
+  }
+
+  getPredictions(): AnalysisResult | null {
+    try {
+      const data = localStorage.getItem(`${this.SESSION_STORAGE_KEY}_predictions`);
+      return data ? JSON.parse(data) : null;
+    } catch (error) {
+      console.error('Failed to retrieve predictions:', error);
+      return null;
+    }
   }
 }
 
