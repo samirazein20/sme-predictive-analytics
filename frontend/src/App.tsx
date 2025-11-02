@@ -79,7 +79,12 @@ import {
   ArrowDownwardOutlined,
   CalendarToday,
   Settings,
-  Description
+  Description,
+  Schedule,
+  Add,
+  Edit,
+  Delete,
+  Save
 } from '@mui/icons-material';
 import { apiService, FileAnalysisResponse, AnalysisResult } from './services/apiService';
 import { 
@@ -199,6 +204,18 @@ const Dashboard: React.FC = () => {
   const [periodBDate, setPeriodBDate] = useState<Dayjs | null>(dayjs());
   const fileInputRefPeriodA = useRef<HTMLInputElement>(null);
   const fileInputRefPeriodB = useRef<HTMLInputElement>(null);
+
+  // Schedule Management state
+  const [schedules, setSchedules] = useState<any[]>([]);
+  const [scheduleDialogOpen, setScheduleDialogOpen] = useState(false);
+  const [selectedSchedule, setSelectedSchedule] = useState<any | null>(null);
+  const [isLoadingSchedules, setIsLoadingSchedules] = useState(false);
+  const [scheduleForm, setScheduleForm] = useState({
+    name: '',
+    recipientEmail: '',
+    frequency: 'WEEKLY',
+    active: true,
+  });
 
   // Check if user is first-time visitor
   useEffect(() => {
@@ -751,6 +768,134 @@ const Dashboard: React.FC = () => {
     
     return { value: delta, percentage, direction };
   };
+
+  // Schedule Management Functions
+  const fetchSchedules = async () => {
+    setIsLoadingSchedules(true);
+    try {
+      const response = await fetch('http://localhost:8080/api/schedules');
+      if (response.ok) {
+        const data = await response.json();
+        setSchedules(data);
+      }
+    } catch (error) {
+      console.error('Failed to fetch schedules:', error);
+      setSnackbar({
+        open: true,
+        message: 'Failed to load schedules',
+        severity: 'error'
+      });
+    } finally {
+      setIsLoadingSchedules(false);
+    }
+  };
+
+  const handleSaveSchedule = async () => {
+    try {
+      const url = selectedSchedule 
+        ? `http://localhost:8080/api/schedules/${selectedSchedule.id}`
+        : 'http://localhost:8080/api/schedules';
+      
+      const method = selectedSchedule ? 'PUT' : 'POST';
+
+      const response = await fetch(url, {
+        method,
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(scheduleForm)
+      });
+
+      if (response.ok) {
+        setSnackbar({
+          open: true,
+          message: selectedSchedule ? 'Schedule updated!' : 'Schedule created!',
+          severity: 'success'
+        });
+        setScheduleDialogOpen(false);
+        setSelectedSchedule(null);
+        setScheduleForm({
+          name: '',
+          recipientEmail: '',
+          frequency: 'WEEKLY',
+          active: true,
+        });
+        fetchSchedules();
+      } else {
+        throw new Error('Failed to save schedule');
+      }
+    } catch (error) {
+      setSnackbar({
+        open: true,
+        message: 'Failed to save schedule',
+        severity: 'error'
+      });
+    }
+  };
+
+  const handleDeleteSchedule = async (id: number) => {
+    if (!window.confirm('Are you sure you want to delete this schedule?')) return;
+
+    try {
+      const response = await fetch(`http://localhost:8080/api/schedules/${id}`, {
+        method: 'DELETE'
+      });
+
+      if (response.ok) {
+        setSnackbar({
+          open: true,
+          message: 'Schedule deleted',
+          severity: 'success'
+        });
+        fetchSchedules();
+      }
+    } catch (error) {
+      setSnackbar({
+        open: true,
+        message: 'Failed to delete schedule',
+        severity: 'error'
+      });
+    }
+  };
+
+  const handleToggleSchedule = async (id: number) => {
+    try {
+      const response = await fetch(`http://localhost:8080/api/schedules/${id}/toggle`, {
+        method: 'POST'
+      });
+
+      if (response.ok) {
+        setSnackbar({
+          open: true,
+          message: 'Schedule status updated',
+          severity: 'success'
+        });
+        fetchSchedules();
+      }
+    } catch (error) {
+      setSnackbar({
+        open: true,
+        message: 'Failed to update schedule',
+        severity: 'error'
+      });
+    }
+  };
+
+  const handleEditSchedule = (schedule: any) => {
+    setSelectedSchedule(schedule);
+    setScheduleForm({
+      name: schedule.name,
+      recipientEmail: schedule.recipientEmail,
+      frequency: schedule.frequency,
+      active: schedule.active,
+    });
+    setScheduleDialogOpen(true);
+  };
+
+  // Load schedules when comparison tab is active
+  useEffect(() => {
+    if (activeTab === 1) { // Comparison tab
+      fetchSchedules();
+    }
+  }, [activeTab]);
 
   // Generate actionable recommendations based on analysis results
   const generateRecommendations = (results: AnalysisResult) => {
@@ -2184,6 +2329,114 @@ Upload CSV or Excel files with your business data to get started.`}
           </Box>
         )}
 
+        {/* Schedule Management Section */}
+        <Box sx={{ mt: 4 }}>
+          <Divider sx={{ mb: 3 }}>
+            <Chip icon={<Schedule />} label="AUTOMATED SCHEDULES" color="primary" />
+          </Divider>
+
+          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
+            <Typography variant="h6" sx={{ display: 'flex', alignItems: 'center' }}>
+              <Schedule sx={{ mr: 1 }} />
+              Manage Comparison Schedules
+            </Typography>
+            <Button
+              variant="contained"
+              startIcon={<Add />}
+              onClick={() => {
+                setSelectedSchedule(null);
+                setScheduleForm({
+                  name: '',
+                  recipientEmail: '',
+                  frequency: 'WEEKLY',
+                  active: true,
+                });
+                setScheduleDialogOpen(true);
+              }}
+            >
+              Create Schedule
+            </Button>
+          </Box>
+
+          {isLoadingSchedules ? (
+            <LinearProgress />
+          ) : schedules.length === 0 ? (
+            <Alert severity="info">
+              No schedules yet. Create one to automatically receive comparison reports!
+            </Alert>
+          ) : (
+            <Grid container spacing={2}>
+              {schedules.map((schedule) => (
+                <Grid item xs={12} md={6} key={schedule.id}>
+                  <Card>
+                    <CardContent>
+                      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 2 }}>
+                        <Box>
+                          <Typography variant="h6">{schedule.name}</Typography>
+                          <Typography variant="body2" color="text.secondary">
+                            {schedule.recipientEmail}
+                          </Typography>
+                        </Box>
+                        <FormControlLabel
+                          control={
+                            <Switch
+                              checked={schedule.active}
+                              onChange={() => handleToggleSchedule(schedule.id)}
+                              color="primary"
+                            />
+                          }
+                          label={schedule.active ? 'Active' : 'Paused'}
+                        />
+                      </Box>
+
+                      <Grid container spacing={2} sx={{ mb: 2 }}>
+                        <Grid item xs={6}>
+                          <Typography variant="body2" color="text.secondary">Frequency</Typography>
+                          <Typography variant="body1">{schedule.frequency}</Typography>
+                        </Grid>
+                        <Grid item xs={6}>
+                          <Typography variant="body2" color="text.secondary">Next Run</Typography>
+                          <Typography variant="body1">
+                            {schedule.nextRunAt ? dayjs(schedule.nextRunAt).format('MMM D, YYYY h:mm A') : 'N/A'}
+                          </Typography>
+                        </Grid>
+                        {schedule.lastRunAt && (
+                          <Grid item xs={12}>
+                            <Typography variant="body2" color="text.secondary">Last Run</Typography>
+                            <Typography variant="body1">
+                              {dayjs(schedule.lastRunAt).format('MMM D, YYYY h:mm A')}
+                            </Typography>
+                          </Grid>
+                        )}
+                      </Grid>
+
+                      <Box sx={{ display: 'flex', gap: 1 }}>
+                        <Button
+                          size="small"
+                          variant="outlined"
+                          startIcon={<Edit />}
+                          onClick={() => handleEditSchedule(schedule)}
+                        >
+                          Edit
+                        </Button>
+                        <Button
+                          size="small"
+                          variant="outlined"
+                          color="error"
+                          startIcon={<Delete />}
+                          onClick={() => handleDeleteSchedule(schedule.id)}
+                        >
+                          Delete
+                        </Button>
+                      </Box>
+                    </CardContent>
+                  </Card>
+                </Grid>
+              ))}
+            </Grid>
+          )}
+        </Box>
+
         {uploadError && (
           <Alert severity="error" sx={{ mt: 2 }}>
             {uploadError}
@@ -2590,6 +2843,95 @@ Upload CSV or Excel files with your business data to get started.`}
             startIcon={<Settings />}
           >
             Save Template
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Schedule Dialog */}
+      <Dialog
+        open={scheduleDialogOpen}
+        onClose={() => setScheduleDialogOpen(false)}
+        maxWidth="sm"
+        fullWidth
+      >
+        <DialogTitle>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+            <Schedule color="primary" />
+            <Typography variant="h6">
+              {selectedSchedule ? 'Edit Schedule' : 'Create New Schedule'}
+            </Typography>
+          </Box>
+        </DialogTitle>
+        <DialogContent>
+          <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
+            Set up automated comparison reports to be sent to your email at regular intervals.
+          </Typography>
+          
+          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3, mt: 2 }}>
+            <TextField
+              label="Schedule Name"
+              fullWidth
+              variant="outlined"
+              value={scheduleForm.name}
+              onChange={(e) => setScheduleForm({ ...scheduleForm, name: e.target.value })}
+              placeholder="e.g., Weekly Sales Comparison"
+              helperText="Give your schedule a descriptive name"
+            />
+
+            <TextField
+              label="Recipient Email"
+              type="email"
+              fullWidth
+              variant="outlined"
+              value={scheduleForm.recipientEmail}
+              onChange={(e) => setScheduleForm({ ...scheduleForm, recipientEmail: e.target.value })}
+              placeholder="your@email.com"
+              helperText="Email address to receive the reports"
+            />
+
+            <TextField
+              select
+              label="Frequency"
+              fullWidth
+              variant="outlined"
+              value={scheduleForm.frequency}
+              onChange={(e) => setScheduleForm({ ...scheduleForm, frequency: e.target.value })}
+              helperText="How often to send comparison reports"
+            >
+              <MenuItem value="DAILY">Daily</MenuItem>
+              <MenuItem value="WEEKLY">Weekly</MenuItem>
+              <MenuItem value="MONTHLY">Monthly</MenuItem>
+            </TextField>
+
+            <FormControlLabel
+              control={
+                <Switch
+                  checked={scheduleForm.active}
+                  onChange={(e) => setScheduleForm({ ...scheduleForm, active: e.target.checked })}
+                  color="primary"
+                />
+              }
+              label={scheduleForm.active ? 'Active' : 'Paused'}
+            />
+
+            <Alert severity="info">
+              <Typography variant="body2">
+                📧 Reports will be sent automatically at 9:00 AM based on your selected frequency
+              </Typography>
+            </Alert>
+          </Box>
+        </DialogContent>
+        <DialogActions sx={{ px: 3, pb: 2 }}>
+          <Button onClick={() => setScheduleDialogOpen(false)}>
+            Cancel
+          </Button>
+          <Button
+            variant="contained"
+            onClick={handleSaveSchedule}
+            disabled={!scheduleForm.name || !scheduleForm.recipientEmail}
+            startIcon={<Save />}
+          >
+            {selectedSchedule ? 'Update' : 'Create'}
           </Button>
         </DialogActions>
       </Dialog>
