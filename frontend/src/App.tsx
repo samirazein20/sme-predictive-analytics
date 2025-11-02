@@ -2,6 +2,10 @@ import React, { useState, useRef, useEffect } from 'react';
 import { ThemeProvider, createTheme } from '@mui/material/styles';
 import CssBaseline from '@mui/material/CssBaseline';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
+import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs';
+import { DatePicker } from '@mui/x-date-pickers/DatePicker';
+import dayjs, { Dayjs } from 'dayjs';
 import { 
   Container,
   Box,
@@ -66,7 +70,12 @@ import {
   PictureAsPdf,
   TableChart,
   Share,
-  Email
+  Email,
+  Compare,
+  ArrowForward,
+  ArrowUpwardOutlined,
+  ArrowDownwardOutlined,
+  CalendarToday
 } from '@mui/icons-material';
 import { apiService, FileAnalysisResponse, AnalysisResult } from './services/apiService';
 import { 
@@ -135,6 +144,16 @@ const Dashboard: React.FC = () => {
   const [downloadMenuAnchor, setDownloadMenuAnchor] = useState<null | HTMLElement>(null);
   const [emailDialogOpen, setEmailDialogOpen] = useState(false);
   const [emailAddress, setEmailAddress] = useState('');
+
+  // Comparison Mode state
+  const [periodAFiles, setPeriodAFiles] = useState<FileAnalysisResponse[]>([]);
+  const [periodBFiles, setPeriodBFiles] = useState<FileAnalysisResponse[]>([]);
+  const [periodAResults, setPeriodAResults] = useState<AnalysisResult | null>(null);
+  const [periodBResults, setPeriodBResults] = useState<AnalysisResult | null>(null);
+  const [periodADate, setPeriodADate] = useState<Dayjs | null>(dayjs().subtract(1, 'month'));
+  const [periodBDate, setPeriodBDate] = useState<Dayjs | null>(dayjs());
+  const fileInputRefPeriodA = useRef<HTMLInputElement>(null);
+  const fileInputRefPeriodB = useRef<HTMLInputElement>(null);
 
   // Check if user is first-time visitor
   useEffect(() => {
@@ -518,6 +537,111 @@ Visit the platform to view full interactive report.
     alert(`Report summary copied to clipboard!\n\nIn production, this would email the full report to: ${emailAddress}`);
     setEmailDialogOpen(false);
     setEmailAddress('');
+  };
+
+  // Comparison Mode Handlers
+  const handlePeriodAUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const files = event.target.files;
+    if (!files || files.length === 0) return;
+
+    setIsUploading(true);
+    setUploadError(null);
+
+    const formData = new FormData();
+    Array.from(files).forEach(file => {
+      formData.append('files', file);
+    });
+
+    try {
+      const response = await fetch('http://localhost:5000/api/upload', {
+        method: 'POST',
+        body: formData,
+      });
+
+      if (!response.ok) {
+        throw new Error('Upload failed');
+      }
+
+      const data = await response.json();
+      setPeriodAFiles(data.files);
+      
+      // Automatically analyze Period A data
+      const analysisResponse = await fetch('http://localhost:5000/api/analyze', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          file_ids: data.files.map((f: FileAnalysisResponse) => f.sessionId)
+        })
+      });
+
+      if (analysisResponse.ok) {
+        const analysisData = await analysisResponse.json();
+        setPeriodAResults(analysisData);
+      }
+    } catch (error) {
+      setUploadError('Failed to upload files for Period A. Please try again.');
+      console.error('Period A upload error:', error);
+    } finally {
+      setIsUploading(false);
+    }
+  };
+
+  const handlePeriodBUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const files = event.target.files;
+    if (!files || files.length === 0) return;
+
+    setIsUploading(true);
+    setUploadError(null);
+
+    const formData = new FormData();
+    Array.from(files).forEach(file => {
+      formData.append('files', file);
+    });
+
+    try {
+      const response = await fetch('http://localhost:5000/api/upload', {
+        method: 'POST',
+        body: formData,
+      });
+
+      if (!response.ok) {
+        throw new Error('Upload failed');
+      }
+
+      const data = await response.json();
+      setPeriodBFiles(data.files);
+      
+      // Automatically analyze Period B data
+      const analysisResponse = await fetch('http://localhost:5000/api/analyze', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          file_ids: data.files.map((f: FileAnalysisResponse) => f.sessionId)
+        })
+      });
+
+      if (analysisResponse.ok) {
+        const analysisData = await analysisResponse.json();
+        setPeriodBResults(analysisData);
+      }
+    } catch (error) {
+      setUploadError('Failed to upload files for Period B. Please try again.');
+      console.error('Period B upload error:', error);
+    } finally {
+      setIsUploading(false);
+    }
+  };
+
+  const calculateDelta = (valueA: number | undefined, valueB: number | undefined): { value: number; percentage: number; direction: 'up' | 'down' | 'neutral' } => {
+    if (valueA === undefined || valueB === undefined || valueA === 0) {
+      return { value: 0, percentage: 0, direction: 'neutral' };
+    }
+    
+    const delta = valueB - valueA;
+    const percentage = (delta / valueA) * 100;
+    const direction = delta > 0 ? 'up' : delta < 0 ? 'down' : 'neutral';
+    
+    return { value: delta, percentage, direction };
   };
 
   // Generate actionable recommendations based on analysis results
@@ -1469,6 +1593,287 @@ Upload CSV or Excel files with your business data to get started.`}
     </Paper>
   );
 
+  const renderComparison = () => (
+    <LocalizationProvider dateAdapter={AdapterDayjs}>
+      <Paper sx={{ p: 3 }}>
+        <Box sx={{ mb: 4 }}>
+          <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
+            <Compare sx={{ fontSize: 40, color: 'primary.main', mr: 2 }} />
+            <Box>
+              <Typography variant="h5" gutterBottom>
+                Compare Time Periods
+              </Typography>
+              <Typography variant="body2" color="text.secondary">
+                Upload data from two different time periods to see how your business metrics have changed
+              </Typography>
+            </Box>
+          </Box>
+
+          <Alert severity="info" sx={{ mb: 3 }}>
+            <Typography variant="body2">
+              💡 <strong>How it works:</strong> Upload data from Period A (e.g., last month) and Period B (e.g., this month) to compare metrics side-by-side with automatic delta calculations.
+            </Typography>
+          </Alert>
+        </Box>
+
+        <Grid container spacing={3}>
+          {/* Period A Upload */}
+          <Grid item xs={12} md={6}>
+            <Card sx={{ height: '100%', borderLeft: 4, borderColor: 'primary.main' }}>
+              <CardContent>
+                <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
+                  <CalendarToday sx={{ mr: 1, color: 'primary.main' }} />
+                  <Typography variant="h6">Period A (Earlier)</Typography>
+                </Box>
+
+                <DatePicker
+                  label="Period A Date"
+                  value={periodADate}
+                  onChange={(newValue) => setPeriodADate(newValue)}
+                  sx={{ width: '100%', mb: 2 }}
+                />
+
+                <input
+                  ref={fileInputRefPeriodA}
+                  type="file"
+                  multiple
+                  accept=".csv,.xlsx,.xls"
+                  onChange={handlePeriodAUpload}
+                  style={{ display: 'none' }}
+                />
+
+                <Button
+                  variant="outlined"
+                  fullWidth
+                  onClick={() => fileInputRefPeriodA.current?.click()}
+                  disabled={isUploading}
+                  sx={{ mb: 2 }}
+                >
+                  <CloudUpload sx={{ mr: 1 }} />
+                  Upload Period A Data
+                </Button>
+
+                {periodAFiles.length > 0 && (
+                  <Box>
+                    <Typography variant="body2" color="success.main" gutterBottom>
+                      ✅ {periodAFiles.length} file(s) uploaded
+                    </Typography>
+                    {periodAResults && (
+                      <Chip 
+                        label="Analysis Complete" 
+                        color="success" 
+                        size="small" 
+                        icon={<CheckCircle />}
+                      />
+                    )}
+                  </Box>
+                )}
+              </CardContent>
+            </Card>
+          </Grid>
+
+          {/* Period B Upload */}
+          <Grid item xs={12} md={6}>
+            <Card sx={{ height: '100%', borderLeft: 4, borderColor: 'secondary.main' }}>
+              <CardContent>
+                <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
+                  <CalendarToday sx={{ mr: 1, color: 'secondary.main' }} />
+                  <Typography variant="h6">Period B (Later)</Typography>
+                </Box>
+
+                <DatePicker
+                  label="Period B Date"
+                  value={periodBDate}
+                  onChange={(newValue) => setPeriodBDate(newValue)}
+                  sx={{ width: '100%', mb: 2 }}
+                />
+
+                <input
+                  ref={fileInputRefPeriodB}
+                  type="file"
+                  multiple
+                  accept=".csv,.xlsx,.xls"
+                  onChange={handlePeriodBUpload}
+                  style={{ display: 'none' }}
+                />
+
+                <Button
+                  variant="outlined"
+                  fullWidth
+                  onClick={() => fileInputRefPeriodB.current?.click()}
+                  disabled={isUploading}
+                  sx={{ mb: 2 }}
+                >
+                  <CloudUpload sx={{ mr: 1 }} />
+                  Upload Period B Data
+                </Button>
+
+                {periodBFiles.length > 0 && (
+                  <Box>
+                    <Typography variant="body2" color="success.main" gutterBottom>
+                      ✅ {periodBFiles.length} file(s) uploaded
+                    </Typography>
+                    {periodBResults && (
+                      <Chip 
+                        label="Analysis Complete" 
+                        color="success" 
+                        size="small" 
+                        icon={<CheckCircle />}
+                      />
+                    )}
+                  </Box>
+                )}
+              </CardContent>
+            </Card>
+          </Grid>
+        </Grid>
+
+        {/* Comparison Results */}
+        {periodAResults && periodBResults && (
+          <Box sx={{ mt: 4 }}>
+            <Divider sx={{ mb: 3 }}>
+              <Chip icon={<Compare />} label="COMPARISON RESULTS" color="primary" />
+            </Divider>
+
+            {/* Trends Comparison */}
+            {periodAResults.trends && periodBResults.trends && (
+              <Box sx={{ mb: 4 }}>
+                <Typography variant="h6" gutterBottom sx={{ display: 'flex', alignItems: 'center' }}>
+                  <TrendingUp sx={{ mr: 1 }} />
+                  Trend Comparison
+                </Typography>
+                <Grid container spacing={2}>
+                  {Object.keys(periodAResults.trends).map((metric) => {
+                    const valueA = periodAResults.trends[metric]?.latest_value;
+                    const valueB = periodBResults.trends[metric]?.latest_value;
+                    const delta = calculateDelta(valueA, valueB);
+
+                    return (
+                      <Grid item xs={12} md={6} key={metric}>
+                        <Card>
+                          <CardContent>
+                            <Typography variant="subtitle2" color="text.secondary" gutterBottom>
+                              {metric.replace(/_/g, ' ').toUpperCase()}
+                            </Typography>
+                            <Grid container spacing={2} alignItems="center">
+                              <Grid item xs={4}>
+                                <Typography variant="body2" color="text.secondary">Period A</Typography>
+                                <Typography variant="h6">{valueA?.toFixed(2) || 'N/A'}</Typography>
+                              </Grid>
+                              <Grid item xs={4} sx={{ textAlign: 'center' }}>
+                                {delta.direction === 'up' ? (
+                                  <ArrowUpwardOutlined sx={{ color: 'success.main', fontSize: 32 }} />
+                                ) : delta.direction === 'down' ? (
+                                  <ArrowDownwardOutlined sx={{ color: 'error.main', fontSize: 32 }} />
+                                ) : (
+                                  <ArrowForward sx={{ color: 'text.secondary', fontSize: 32 }} />
+                                )}
+                                <Chip
+                                  label={`${delta.percentage >= 0 ? '+' : ''}${delta.percentage.toFixed(1)}%`}
+                                  color={delta.direction === 'up' ? 'success' : delta.direction === 'down' ? 'error' : 'default'}
+                                  size="small"
+                                  sx={{ mt: 1 }}
+                                />
+                              </Grid>
+                              <Grid item xs={4} sx={{ textAlign: 'right' }}>
+                                <Typography variant="body2" color="text.secondary">Period B</Typography>
+                                <Typography variant="h6">{valueB?.toFixed(2) || 'N/A'}</Typography>
+                              </Grid>
+                            </Grid>
+                          </CardContent>
+                        </Card>
+                      </Grid>
+                    );
+                  })}
+                </Grid>
+              </Box>
+            )}
+
+            {/* Predictions Comparison */}
+            {periodAResults.predictions && periodBResults.predictions && (
+              <Box sx={{ mb: 4 }}>
+                <Typography variant="h6" gutterBottom sx={{ display: 'flex', alignItems: 'center' }}>
+                  <ShowChart sx={{ mr: 1 }} />
+                  Forecast Comparison (7-Day Average)
+                </Typography>
+                <Card>
+                  <CardContent>
+                    {(() => {
+                      const avgA = periodAResults.predictions.reduce((a, b) => a + b, 0) / periodAResults.predictions.length;
+                      const avgB = periodBResults.predictions.reduce((a, b) => a + b, 0) / periodBResults.predictions.length;
+                      const delta = calculateDelta(avgA, avgB);
+
+                      return (
+                        <Grid container spacing={2} alignItems="center">
+                          <Grid item xs={4}>
+                            <Typography variant="body2" color="text.secondary">Period A Forecast</Typography>
+                            <Typography variant="h5">{avgA.toFixed(2)}</Typography>
+                          </Grid>
+                          <Grid item xs={4} sx={{ textAlign: 'center' }}>
+                            {delta.direction === 'up' ? (
+                              <ArrowUpwardOutlined sx={{ color: 'success.main', fontSize: 40 }} />
+                            ) : delta.direction === 'down' ? (
+                              <ArrowDownwardOutlined sx={{ color: 'error.main', fontSize: 40 }} />
+                            ) : (
+                              <ArrowForward sx={{ color: 'text.secondary', fontSize: 40 }} />
+                            )}
+                            <Typography variant="h6" sx={{ mt: 1 }}>
+                              {delta.percentage >= 0 ? '+' : ''}{delta.percentage.toFixed(1)}%
+                            </Typography>
+                          </Grid>
+                          <Grid item xs={4} sx={{ textAlign: 'right' }}>
+                            <Typography variant="body2" color="text.secondary">Period B Forecast</Typography>
+                            <Typography variant="h5">{avgB.toFixed(2)}</Typography>
+                          </Grid>
+                        </Grid>
+                      );
+                    })()}
+                  </CardContent>
+                </Card>
+              </Box>
+            )}
+
+            {/* Insights Summary */}
+            <Box>
+              <Typography variant="h6" gutterBottom sx={{ display: 'flex', alignItems: 'center' }}>
+                <Lightbulb sx={{ mr: 1 }} />
+                Key Changes
+              </Typography>
+              <Grid container spacing={2}>
+                <Grid item xs={12} md={6}>
+                  <Card sx={{ borderLeft: 4, borderColor: 'primary.main' }}>
+                    <CardContent>
+                      <Typography variant="subtitle2" gutterBottom>Period A Insights</Typography>
+                      <Typography variant="body2" color="text.secondary">
+                        {periodAResults.insights?.length || 0} insights generated
+                      </Typography>
+                    </CardContent>
+                  </Card>
+                </Grid>
+                <Grid item xs={12} md={6}>
+                  <Card sx={{ borderLeft: 4, borderColor: 'secondary.main' }}>
+                    <CardContent>
+                      <Typography variant="subtitle2" gutterBottom>Period B Insights</Typography>
+                      <Typography variant="body2" color="text.secondary">
+                        {periodBResults.insights?.length || 0} insights generated
+                      </Typography>
+                    </CardContent>
+                  </Card>
+                </Grid>
+              </Grid>
+            </Box>
+          </Box>
+        )}
+
+        {uploadError && (
+          <Alert severity="error" sx={{ mt: 2 }}>
+            {uploadError}
+          </Alert>
+        )}
+      </Paper>
+    </LocalizationProvider>
+  );
+
   // Onboarding tour steps configuration
   const onboardingSteps = [
     {
@@ -1572,6 +1977,12 @@ Upload CSV or Excel files with your business data to get started.`}
             aria-controls="panel-analytics"
             aria-label="View analytics dashboard tab"
           />
+          <Tab 
+            label="⚖️ Compare" 
+            id="tab-compare"
+            aria-controls="panel-compare"
+            aria-label="Compare time periods tab"
+          />
         </Tabs>
       </AppBar>
 
@@ -1586,6 +1997,9 @@ Upload CSV or Excel files with your business data to get started.`}
       </TabPanel>
       <TabPanel value={activeTab} index={3}>
         {renderAnalytics()}
+      </TabPanel>
+      <TabPanel value={activeTab} index={4}>
+        {renderComparison()}
       </TabPanel>
 
       {/* Onboarding Modal */}
