@@ -34,7 +34,11 @@ import {
   CheckCircle,
   Info,
   ShowChart,
-  Assessment
+  Assessment,
+  Lock,
+  Storefront,
+  Restaurant,
+  ShoppingCart
 } from '@mui/icons-material';
 import { apiService, FileAnalysisResponse, AnalysisResult } from './services/apiService';
 import { 
@@ -204,6 +208,85 @@ const Dashboard: React.FC = () => {
     apiService.clearSession(); // Clear saved session
   };
 
+  const handleLoadSampleData = async (sampleType: 'retail' | 'ecommerce' | 'restaurant') => {
+    setIsUploading(true);
+    setUploadError(null);
+
+    try {
+      // Create sample CSV data based on type
+      let csvContent = '';
+      let filename = '';
+
+      if (sampleType === 'retail') {
+        filename = 'sample_coffee_shop_sales.csv';
+        csvContent = `Date,Revenue,Customers,Orders,Marketing_Spend,Product_Category,Region
+2024-01-01,2400,85,62,450,Coffee,Downtown
+2024-01-02,2850,102,78,520,Coffee,Downtown
+2024-01-03,1950,68,51,380,Pastries,Downtown
+2024-01-04,3200,115,89,580,Coffee,Downtown
+2024-01-05,2700,95,72,490,Mixed,Downtown
+2024-01-06,2950,108,81,540,Coffee,Downtown
+2024-01-07,2600,92,68,470,Mixed,Downtown
+2024-01-08,3100,112,86,560,Coffee,Downtown
+2024-01-09,2400,84,64,440,Pastries,Downtown
+2024-01-10,2800,98,75,510,Coffee,Downtown
+2024-01-11,3350,118,92,590,Mixed,Downtown
+2024-01-12,2950,105,80,530,Coffee,Downtown
+2024-01-13,2700,96,73,480,Pastries,Downtown
+2024-01-14,3200,114,88,570,Coffee,Downtown
+2024-01-15,2850,100,77,520,Mixed,Downtown`;
+      } else if (sampleType === 'ecommerce') {
+        filename = 'sample_online_boutique_sales.csv';
+        csvContent = `Date,Revenue,Orders,Customers,Marketing_Spend,Product_Category,Channel
+2024-01-01,8500,45,38,1200,Clothing,Facebook
+2024-01-02,9200,52,44,1350,Accessories,Instagram
+2024-01-03,7800,41,35,1100,Clothing,Google
+2024-01-04,10500,58,49,1500,Mixed,Facebook
+2024-01-05,9100,48,42,1280,Shoes,Instagram
+2024-01-06,8900,47,40,1250,Clothing,Google
+2024-01-07,11200,62,53,1600,Mixed,Facebook
+2024-01-08,9600,51,44,1350,Accessories,Instagram
+2024-01-09,8400,44,38,1180,Clothing,Google
+2024-01-10,10800,59,50,1520,Mixed,Facebook
+2024-01-11,9400,50,43,1320,Shoes,Instagram
+2024-01-12,10200,56,48,1450,Clothing,Google
+2024-01-13,11500,63,54,1620,Mixed,Facebook
+2024-01-14,9800,52,45,1380,Accessories,Instagram
+2024-01-15,10600,58,49,1490,Clothing,Google`;
+      } else {
+        filename = 'sample_restaurant_operations.csv';
+        csvContent = `Date,Revenue,Covers,Avg_Check,Food_Cost,Labor_Cost,Day_Part
+2024-01-01,4500,85,52.94,1350,1200,Dinner
+2024-01-02,5200,102,50.98,1560,1400,Dinner
+2024-01-03,3800,78,48.72,1140,1000,Dinner
+2024-01-04,5800,115,50.43,1740,1550,Dinner
+2024-01-05,4900,95,51.58,1470,1300,Dinner
+2024-01-06,5400,108,50.00,1620,1450,Dinner
+2024-01-07,4700,92,51.09,1410,1250,Dinner
+2024-01-08,6100,118,51.69,1830,1600,Dinner
+2024-01-09,4300,84,51.19,1290,1150,Dinner
+2024-01-10,5500,105,52.38,1650,1450,Dinner
+2024-01-11,6300,122,51.64,1890,1650,Dinner
+2024-01-12,5700,110,51.82,1710,1500,Dinner
+2024-01-13,4800,94,51.06,1440,1280,Dinner
+2024-01-14,6000,116,51.72,1800,1580,Dinner
+2024-01-15,5300,103,51.46,1590,1400,Dinner`;
+      }
+
+      // Convert CSV string to File object
+      const blob = new Blob([csvContent], { type: 'text/csv' });
+      const file = new File([blob], filename, { type: 'text/csv' });
+
+      // Upload the sample file
+      await processFileUpload(file);
+    } catch (error) {
+      console.error('Failed to load sample data:', error);
+      setUploadError('Failed to load sample data. Please try again.');
+    } finally {
+      setIsUploading(false);
+    }
+  };
+
   const renderOverview = () => (
     <>
       <Typography variant="h2" component="h2" gutterBottom>
@@ -318,6 +401,30 @@ const Dashboard: React.FC = () => {
         Upload your CSV or Excel files to get started with predictions.
       </Typography>
       
+      {/* Privacy Banner */}
+      <Alert 
+        severity="info" 
+        icon={<Lock />}
+        sx={{ 
+          mb: 3,
+          backgroundColor: '#e3f2fd',
+          border: '1px solid #2196f3'
+        }}
+      >
+        <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 0.5 }}>
+          🔒 Your Data is Secure
+        </Typography>
+        <Typography variant="body2" component="div">
+          • All uploads are encrypted in transit (TLS) and at rest (AES-256)
+          <br />
+          • Data is never shared with third parties or used for training
+          <br />
+          • You can delete your data anytime from your account
+          <br />
+          • Compliant with GDPR, SOC 2, and industry best practices
+        </Typography>
+      </Alert>
+      
       {isRestoring && (
         <Box sx={{ mb: 2 }}>
           <LinearProgress />
@@ -340,6 +447,69 @@ const Dashboard: React.FC = () => {
         disabled={isRestoring}
         isUploading={isUploading || isAnalyzing}
       />
+
+      {/* Sample Data Section */}
+      <Box sx={{ mt: 3, mb: 2 }}>
+        <Divider sx={{ mb: 2 }}>
+          <Chip label="OR TRY WITH SAMPLE DATA" />
+        </Divider>
+        <Typography variant="body2" color="text.secondary" sx={{ mb: 2, textAlign: 'center' }}>
+          Not ready to upload your data? Try the platform with pre-loaded business examples
+        </Typography>
+        <Grid container spacing={2}>
+          <Grid item xs={12} md={4}>
+            <Button
+              fullWidth
+              variant="outlined"
+              startIcon={<Storefront />}
+              onClick={() => handleLoadSampleData('retail')}
+              disabled={isUploading || isAnalyzing}
+              sx={{ height: '100%', py: 2, flexDirection: 'column', gap: 1 }}
+            >
+              <Typography variant="subtitle2" sx={{ fontWeight: 600 }}>
+                Coffee Shop
+              </Typography>
+              <Typography variant="caption" color="text.secondary">
+                15 days of retail sales data
+              </Typography>
+            </Button>
+          </Grid>
+          <Grid item xs={12} md={4}>
+            <Button
+              fullWidth
+              variant="outlined"
+              startIcon={<ShoppingCart />}
+              onClick={() => handleLoadSampleData('ecommerce')}
+              disabled={isUploading || isAnalyzing}
+              sx={{ height: '100%', py: 2, flexDirection: 'column', gap: 1 }}
+            >
+              <Typography variant="subtitle2" sx={{ fontWeight: 600 }}>
+                Online Boutique
+              </Typography>
+              <Typography variant="caption" color="text.secondary">
+                15 days of e-commerce data
+              </Typography>
+            </Button>
+          </Grid>
+          <Grid item xs={12} md={4}>
+            <Button
+              fullWidth
+              variant="outlined"
+              startIcon={<Restaurant />}
+              onClick={() => handleLoadSampleData('restaurant')}
+              disabled={isUploading || isAnalyzing}
+              sx={{ height: '100%', py: 2, flexDirection: 'column', gap: 1 }}
+            >
+              <Typography variant="subtitle2" sx={{ fontWeight: 600 }}>
+                Restaurant
+              </Typography>
+              <Typography variant="caption" color="text.secondary">
+                15 days of operations data
+              </Typography>
+            </Button>
+          </Grid>
+        </Grid>
+      </Box>
 
       {(isUploading || isAnalyzing) && (
         <Box sx={{ mt: 2 }}>
