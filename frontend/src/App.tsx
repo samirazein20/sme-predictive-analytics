@@ -34,7 +34,10 @@ import {
   StepLabel,
   StepContent,
   IconButton,
-  Backdrop
+  Backdrop,
+  Menu,
+  MenuItem,
+  TextField
 } from '@mui/material';
 import { 
   CloudUpload, 
@@ -58,7 +61,12 @@ import {
   ArrowUpward,
   InventoryOutlined,
   CampaignOutlined,
-  PriceCheckOutlined
+  PriceCheckOutlined,
+  Download,
+  PictureAsPdf,
+  TableChart,
+  Share,
+  Email
 } from '@mui/icons-material';
 import { apiService, FileAnalysisResponse, AnalysisResult } from './services/apiService';
 import { 
@@ -122,6 +130,11 @@ const Dashboard: React.FC = () => {
   const [showOnboarding, setShowOnboarding] = useState(false);
   const [onboardingStep, setOnboardingStep] = useState(0);
   const [highlightedElement, setHighlightedElement] = useState<string | null>(null);
+
+  // Download/Export state
+  const [downloadMenuAnchor, setDownloadMenuAnchor] = useState<null | HTMLElement>(null);
+  const [emailDialogOpen, setEmailDialogOpen] = useState(false);
+  const [emailAddress, setEmailAddress] = useState('');
 
   // Check if user is first-time visitor
   useEffect(() => {
@@ -321,6 +334,190 @@ const Dashboard: React.FC = () => {
     } finally {
       setIsUploading(false);
     }
+  };
+
+  // Export handlers
+  const handleDownloadClick = (event: React.MouseEvent<HTMLElement>) => {
+    setDownloadMenuAnchor(event.currentTarget);
+  };
+
+  const handleDownloadClose = () => {
+    setDownloadMenuAnchor(null);
+  };
+
+  const exportToCSV = () => {
+    if (!analysisResults) return;
+
+    let csvContent = 'SME Analytics Report\n\n';
+    csvContent += `Generated: ${new Date().toLocaleString()}\n\n`;
+
+    // Trends section
+    csvContent += 'TRENDS\n';
+    csvContent += 'Metric,Direction,Change %\n';
+    Object.entries(analysisResults.trends || {}).forEach(([key, trend]: [string, any]) => {
+      csvContent += `${key.replace(/_/g, ' ')},${trend.direction},${trend.change_percent}%\n`;
+    });
+    csvContent += '\n';
+
+    // Predictions section
+    csvContent += 'PREDICTIONS (7 days)\n';
+    csvContent += 'Day,Forecast Value\n';
+    (analysisResults.predictions || []).forEach((prediction, index) => {
+      csvContent += `Day ${index + 1},${prediction.toFixed(2)}\n`;
+    });
+    csvContent += '\n';
+
+    // Insights section
+    csvContent += 'AI INSIGHTS\n';
+    csvContent += 'Title,Category,Message,Confidence\n';
+    (analysisResults.insights || []).forEach((insight) => {
+      const message = insight.message.replace(/,/g, ';'); // Replace commas to avoid CSV issues
+      csvContent += `${insight.title},${insight.category},${message},${Math.round(insight.score * 100)}%\n`;
+    });
+
+    // Recommendations section
+    const recommendations = generateRecommendations(analysisResults);
+    if (recommendations.length > 0) {
+      csvContent += '\nRECOMMENDATIONS\n';
+      csvContent += 'Priority,Title,Category,Action\n';
+      recommendations.forEach((rec) => {
+        const action = rec.action.replace(/,/g, ';');
+        csvContent += `${rec.priority.toUpperCase()},${rec.title},${rec.category},${action}\n`;
+      });
+    }
+
+    // Create and download file
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    const url = URL.createObjectURL(blob);
+    link.setAttribute('href', url);
+    link.setAttribute('download', `sme-analytics-report-${Date.now()}.csv`);
+    link.style.visibility = 'hidden';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    handleDownloadClose();
+  };
+
+  const exportToPDF = () => {
+    if (!analysisResults) return;
+
+    // Create a printable HTML version
+    const reportContent = `
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <title>SME Analytics Report</title>
+        <style>
+          body { font-family: Arial, sans-serif; max-width: 800px; margin: 20px auto; padding: 20px; }
+          h1 { color: #1976d2; border-bottom: 3px solid #1976d2; padding-bottom: 10px; }
+          h2 { color: #333; margin-top: 30px; border-bottom: 2px solid #e0e0e0; padding-bottom: 5px; }
+          table { width: 100%; border-collapse: collapse; margin: 20px 0; }
+          th, td { padding: 12px; text-align: left; border-bottom: 1px solid #ddd; }
+          th { background-color: #f5f5f5; font-weight: bold; }
+          .priority-high { color: #d32f2f; font-weight: bold; }
+          .priority-medium { color: #f57c00; font-weight: bold; }
+          .priority-low { color: #388e3c; font-weight: bold; }
+          .insight-card { background: #f5f5f5; padding: 15px; margin: 10px 0; border-radius: 5px; }
+          .metric { font-size: 24px; font-weight: bold; color: #1976d2; }
+          .date { color: #666; font-size: 14px; }
+          @media print {
+            body { margin: 0; padding: 20px; }
+            .no-print { display: none; }
+          }
+        </style>
+      </head>
+      <body>
+        <h1>📊 SME Analytics Report</h1>
+        <p class="date">Generated: ${new Date().toLocaleString()}</p>
+
+        <h2>📈 Trend Analysis</h2>
+        <table>
+          <tr><th>Metric</th><th>Direction</th><th>Change %</th></tr>
+          ${Object.entries(analysisResults.trends || {}).map(([key, trend]: [string, any]) => `
+            <tr>
+              <td>${key.replace(/_/g, ' ')}</td>
+              <td>${trend.direction}</td>
+              <td>${trend.change_percent > 0 ? '+' : ''}${trend.change_percent}%</td>
+            </tr>
+          `).join('')}
+        </table>
+
+        <h2>🔮 Predictions (7-day Forecast)</h2>
+        <table>
+          <tr><th>Day</th><th>Forecast Value</th></tr>
+          ${(analysisResults.predictions || []).map((prediction, index) => `
+            <tr>
+              <td>Day ${index + 1}</td>
+              <td class="metric">${prediction.toFixed(2)}</td>
+            </tr>
+          `).join('')}
+        </table>
+
+        <h2>🤖 AI Insights</h2>
+        ${(analysisResults.insights || []).map((insight) => `
+          <div class="insight-card">
+            <h3>${insight.title}</h3>
+            <p><strong>Category:</strong> ${insight.category}</p>
+            <p>${insight.message}</p>
+            <p><strong>Confidence:</strong> ${Math.round(insight.score * 100)}%</p>
+          </div>
+        `).join('')}
+
+        <h2>💡 Recommended Actions</h2>
+        <table>
+          <tr><th>Priority</th><th>Action</th><th>Category</th></tr>
+          ${generateRecommendations(analysisResults).map((rec) => `
+            <tr>
+              <td class="priority-${rec.priority}">${rec.priority.toUpperCase()}</td>
+              <td><strong>${rec.title}</strong><br/>${rec.action}</td>
+              <td>${rec.category}</td>
+            </tr>
+          `).join('')}
+        </table>
+      </body>
+      </html>
+    `;
+
+    // Open in new window for printing
+    const printWindow = window.open('', '_blank');
+    if (printWindow) {
+      printWindow.document.write(reportContent);
+      printWindow.document.close();
+      setTimeout(() => {
+        printWindow.print();
+      }, 250);
+    }
+    handleDownloadClose();
+  };
+
+  const handleEmailReport = () => {
+    setEmailDialogOpen(true);
+    handleDownloadClose();
+  };
+
+  const handleEmailSend = () => {
+    if (!emailAddress || !analysisResults) return;
+
+    // In a real app, this would call a backend API to send email
+    // For now, we'll just show a success message and copy report data
+    const reportSummary = `
+SME Analytics Report Summary
+
+Trends: ${Object.keys(analysisResults.trends || {}).length} metrics analyzed
+Predictions: ${(analysisResults.predictions || []).length} days forecasted
+Insights: ${(analysisResults.insights || []).length} AI-generated insights
+Recommendations: ${generateRecommendations(analysisResults).length} action items
+
+Visit the platform to view full interactive report.
+    `.trim();
+
+    // Copy to clipboard
+    navigator.clipboard.writeText(reportSummary);
+
+    alert(`Report summary copied to clipboard!\n\nIn production, this would email the full report to: ${emailAddress}`);
+    setEmailDialogOpen(false);
+    setEmailAddress('');
   };
 
   // Generate actionable recommendations based on analysis results
@@ -740,7 +937,7 @@ const Dashboard: React.FC = () => {
 
   const renderPredictions = () => (
     <Paper sx={{ p: 3 }}>
-      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2, flexWrap: 'wrap', gap: 2 }}>
         <Box>
           <Typography variant="h2" component="h2" gutterBottom>
             ML Predictions
@@ -749,17 +946,76 @@ const Dashboard: React.FC = () => {
             AI-powered predictions from your uploaded data.
           </Typography>
         </Box>
-        <FormControlLabel
-          control={
-            <Switch 
-              checked={usePlainLanguage}
-              onChange={(e) => setUsePlainLanguage(e.target.checked)}
-              color="primary"
-            />
-          }
-          label={usePlainLanguage ? "Plain Language" : "Technical View"}
-        />
+        <Box sx={{ display: 'flex', gap: 2, alignItems: 'center' }}>
+          {uploadedFiles.length > 0 && analysisResults && (
+            <Button
+              variant="contained"
+              startIcon={<Download />}
+              onClick={handleDownloadClick}
+              sx={{
+                background: 'linear-gradient(45deg, #2196F3 30%, #21CBF3 90%)',
+                boxShadow: '0 3px 5px 2px rgba(33, 203, 243, .3)',
+              }}
+            >
+              Download Report
+            </Button>
+          )}
+          <FormControlLabel
+            control={
+              <Switch 
+                checked={usePlainLanguage}
+                onChange={(e) => setUsePlainLanguage(e.target.checked)}
+                color="primary"
+              />
+            }
+            label={usePlainLanguage ? "Plain Language" : "Technical View"}
+          />
+        </Box>
       </Box>
+
+      {/* Download Menu */}
+      <Menu
+        anchorEl={downloadMenuAnchor}
+        open={Boolean(downloadMenuAnchor)}
+        onClose={handleDownloadClose}
+        anchorOrigin={{
+          vertical: 'bottom',
+          horizontal: 'right',
+        }}
+        transformOrigin={{
+          vertical: 'top',
+          horizontal: 'right',
+        }}
+      >
+        <MenuItem onClick={exportToCSV}>
+          <ListItemIcon>
+            <TableChart fontSize="small" />
+          </ListItemIcon>
+          <ListItemText>
+            <Typography variant="body2">Export as CSV</Typography>
+            <Typography variant="caption" color="text.secondary">Spreadsheet format</Typography>
+          </ListItemText>
+        </MenuItem>
+        <MenuItem onClick={exportToPDF}>
+          <ListItemIcon>
+            <PictureAsPdf fontSize="small" />
+          </ListItemIcon>
+          <ListItemText>
+            <Typography variant="body2">Print as PDF</Typography>
+            <Typography variant="caption" color="text.secondary">Printable report</Typography>
+          </ListItemText>
+        </MenuItem>
+        <Divider />
+        <MenuItem onClick={handleEmailReport}>
+          <ListItemIcon>
+            <Email fontSize="small" />
+          </ListItemIcon>
+          <ListItemText>
+            <Typography variant="body2">Email Report</Typography>
+            <Typography variant="caption" color="text.secondary">Share with stakeholders</Typography>
+          </ListItemText>
+        </MenuItem>
+      </Menu>
       
       {uploadedFiles.length > 0 && analysisResults ? (
         <Box>
@@ -1433,6 +1689,56 @@ Upload CSV or Excel files with your business data to get started.`}
             }}
           >
             Skip Tour
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Email Report Dialog */}
+      <Dialog
+        open={emailDialogOpen}
+        onClose={() => setEmailDialogOpen(false)}
+        maxWidth="sm"
+        fullWidth
+      >
+        <DialogTitle>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+            <Email color="primary" />
+            <Typography variant="h6">Email Report</Typography>
+          </Box>
+        </DialogTitle>
+        <DialogContent>
+          <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
+            Share your analytics report with stakeholders via email. The report will include all predictions, insights, and recommendations.
+          </Typography>
+          <TextField
+            autoFocus
+            margin="dense"
+            label="Recipient Email Address"
+            type="email"
+            fullWidth
+            variant="outlined"
+            value={emailAddress}
+            onChange={(e) => setEmailAddress(e.target.value)}
+            placeholder="colleague@example.com"
+            helperText="Enter the email address of the recipient"
+          />
+          <Alert severity="info" sx={{ mt: 2 }}>
+            <Typography variant="body2">
+              📊 Report will include: Trends, Forecasts, AI Insights, and Recommended Actions
+            </Typography>
+          </Alert>
+        </DialogContent>
+        <DialogActions sx={{ px: 3, pb: 2 }}>
+          <Button onClick={() => setEmailDialogOpen(false)}>
+            Cancel
+          </Button>
+          <Button
+            variant="contained"
+            onClick={handleEmailSend}
+            disabled={!emailAddress || !emailAddress.includes('@')}
+            startIcon={<Share />}
+          >
+            Send Report
           </Button>
         </DialogActions>
       </Dialog>
