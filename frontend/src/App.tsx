@@ -24,7 +24,17 @@ import {
   ListItemText,
   Switch,
   FormControlLabel,
-  Divider
+  Divider,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  Stepper,
+  Step,
+  StepLabel,
+  StepContent,
+  IconButton,
+  Backdrop
 } from '@mui/material';
 import { 
   CloudUpload, 
@@ -38,7 +48,10 @@ import {
   Lock,
   Storefront,
   Restaurant,
-  ShoppingCart
+  ShoppingCart,
+  Close,
+  NavigateNext,
+  NavigateBefore
 } from '@mui/icons-material';
 import { apiService, FileAnalysisResponse, AnalysisResult } from './services/apiService';
 import { 
@@ -97,6 +110,22 @@ const Dashboard: React.FC = () => {
   const [restoredFromCache, setRestoredFromCache] = useState(false);
   const [usePlainLanguage, setUsePlainLanguage] = useState(true); // Default to plain language for better UX
   const fileInputRef = useRef<HTMLInputElement>(null);
+  
+  // Onboarding tour state
+  const [showOnboarding, setShowOnboarding] = useState(false);
+  const [onboardingStep, setOnboardingStep] = useState(0);
+  const [highlightedElement, setHighlightedElement] = useState<string | null>(null);
+
+  // Check if user is first-time visitor
+  useEffect(() => {
+    const hasSeenOnboarding = localStorage.getItem('hasSeenOnboarding');
+    if (!hasSeenOnboarding) {
+      // Show onboarding after a brief delay to let the page load
+      setTimeout(() => {
+        setShowOnboarding(true);
+      }, 1000);
+    }
+  }, []);
 
   // Restore session on component mount
   useEffect(() => {
@@ -972,6 +1001,70 @@ Upload CSV or Excel files with your business data to get started.`}
     </Paper>
   );
 
+  // Onboarding tour steps configuration
+  const onboardingSteps = [
+    {
+      label: 'Welcome to SME Analytics',
+      title: '🎉 Welcome!',
+      description: 'This platform helps small business owners make data-driven decisions. Upload your sales data, get AI predictions, and see actionable insights in minutes.',
+      highlightTab: null,
+    },
+    {
+      label: 'Upload Your Data',
+      title: '📁 Step 1: Upload',
+      description: 'Drag and drop your CSV or Excel files, or try our sample data to see the platform in action. Your data is encrypted and never shared.',
+      highlightTab: 1,
+    },
+    {
+      label: 'View Predictions',
+      title: '🤖 Step 2: Predictions',
+      description: 'Get AI-powered forecasts for revenue, sales, and trends. Toggle plain language mode to see explanations in simple terms.',
+      highlightTab: 2,
+    },
+    {
+      label: 'Analyze Insights',
+      title: '📊 Step 3: Analytics',
+      description: 'View detailed charts, statistics, and insights about your business. Discover patterns and opportunities for growth.',
+      highlightTab: 3,
+    },
+  ];
+
+  const handleOnboardingNext = () => {
+    const nextStep = onboardingStep + 1;
+    if (nextStep < onboardingSteps.length) {
+      setOnboardingStep(nextStep);
+      const step = onboardingSteps[nextStep];
+      if (step.highlightTab !== null) {
+        setActiveTab(step.highlightTab);
+        setHighlightedElement(`tab-${step.highlightTab}`);
+      }
+    } else {
+      handleOnboardingClose();
+    }
+  };
+
+  const handleOnboardingBack = () => {
+    const prevStep = onboardingStep - 1;
+    if (prevStep >= 0) {
+      setOnboardingStep(prevStep);
+      const step = onboardingSteps[prevStep];
+      if (step.highlightTab !== null) {
+        setActiveTab(step.highlightTab);
+        setHighlightedElement(`tab-${step.highlightTab}`);
+      }
+    }
+  };
+
+  const handleOnboardingClose = () => {
+    setShowOnboarding(false);
+    setHighlightedElement(null);
+    localStorage.setItem('hasSeenOnboarding', 'true');
+  };
+
+  const handleOnboardingSkip = () => {
+    handleOnboardingClose();
+  };
+
   return (
     <Container maxWidth="lg" sx={{ py: 2 }}>
       <AppBar position="static" color="transparent" elevation={1} sx={{ mb: 3, borderRadius: 1 }}>
@@ -1026,6 +1119,123 @@ Upload CSV or Excel files with your business data to get started.`}
       <TabPanel value={activeTab} index={3}>
         {renderAnalytics()}
       </TabPanel>
+
+      {/* Onboarding Modal */}
+      <Dialog
+        open={showOnboarding}
+        onClose={handleOnboardingSkip}
+        maxWidth="md"
+        fullWidth
+        PaperProps={{
+          sx: {
+            borderRadius: 2,
+            backgroundImage: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+            color: 'white'
+          }
+        }}
+      >
+        <DialogTitle sx={{ pb: 1 }}>
+          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <Typography variant="h5" component="div" sx={{ fontWeight: 600 }}>
+              {onboardingSteps[onboardingStep].title}
+            </Typography>
+            <IconButton
+              onClick={handleOnboardingSkip}
+              sx={{ color: 'white' }}
+              aria-label="Close onboarding"
+            >
+              <Close />
+            </IconButton>
+          </Box>
+        </DialogTitle>
+        <DialogContent>
+          <Stepper activeStep={onboardingStep} orientation="vertical" sx={{ mt: 2 }}>
+            {onboardingSteps.map((step, index) => (
+              <Step key={step.label}>
+                <StepLabel
+                  sx={{
+                    '& .MuiStepLabel-label': {
+                      color: index === onboardingStep ? 'white' : 'rgba(255,255,255,0.6)',
+                      fontWeight: index === onboardingStep ? 600 : 400,
+                    },
+                    '& .MuiStepIcon-root': {
+                      color: index === onboardingStep ? 'white' : 'rgba(255,255,255,0.4)',
+                      '&.Mui-active': { color: 'white' },
+                      '&.Mui-completed': { color: 'rgba(255,255,255,0.8)' },
+                    }
+                  }}
+                >
+                  {step.label}
+                </StepLabel>
+                <StepContent>
+                  <Typography variant="body1" sx={{ color: 'rgba(255,255,255,0.95)', lineHeight: 1.7 }}>
+                    {step.description}
+                  </Typography>
+                  {index === onboardingStep && (
+                    <Box sx={{ mt: 3, display: 'flex', gap: 2 }}>
+                      <Button
+                        variant="outlined"
+                        onClick={handleOnboardingBack}
+                        disabled={onboardingStep === 0}
+                        startIcon={<NavigateBefore />}
+                        sx={{
+                          color: 'white',
+                          borderColor: 'rgba(255,255,255,0.5)',
+                          '&:hover': {
+                            borderColor: 'white',
+                            backgroundColor: 'rgba(255,255,255,0.1)'
+                          }
+                        }}
+                      >
+                        Back
+                      </Button>
+                      <Button
+                        variant="contained"
+                        onClick={handleOnboardingNext}
+                        endIcon={onboardingStep === onboardingSteps.length - 1 ? <CheckCircle /> : <NavigateNext />}
+                        sx={{
+                          backgroundColor: 'white',
+                          color: '#667eea',
+                          '&:hover': {
+                            backgroundColor: 'rgba(255,255,255,0.9)'
+                          }
+                        }}
+                      >
+                        {onboardingStep === onboardingSteps.length - 1 ? 'Get Started' : 'Next'}
+                      </Button>
+                    </Box>
+                  )}
+                </StepContent>
+              </Step>
+            ))}
+          </Stepper>
+        </DialogContent>
+        <DialogActions sx={{ px: 3, pb: 3 }}>
+          <Button
+            onClick={handleOnboardingSkip}
+            sx={{ 
+              color: 'rgba(255,255,255,0.8)',
+              '&:hover': {
+                backgroundColor: 'rgba(255,255,255,0.1)'
+              }
+            }}
+          >
+            Skip Tour
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Backdrop for highlighting elements */}
+      {highlightedElement && (
+        <Backdrop
+          open={true}
+          sx={{
+            zIndex: (theme) => theme.zIndex.drawer - 1,
+            backgroundColor: 'rgba(0, 0, 0, 0.7)',
+          }}
+          onClick={() => setHighlightedElement(null)}
+        />
+      )}
     </Container>
   );
 };
