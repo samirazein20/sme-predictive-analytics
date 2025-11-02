@@ -51,7 +51,14 @@ import {
   ShoppingCart,
   Close,
   NavigateNext,
-  NavigateBefore
+  NavigateBefore,
+  Lightbulb,
+  Warning,
+  TrendingDown,
+  ArrowUpward,
+  InventoryOutlined,
+  CampaignOutlined,
+  PriceCheckOutlined
 } from '@mui/icons-material';
 import { apiService, FileAnalysisResponse, AnalysisResult } from './services/apiService';
 import { 
@@ -314,6 +321,108 @@ const Dashboard: React.FC = () => {
     } finally {
       setIsUploading(false);
     }
+  };
+
+  // Generate actionable recommendations based on analysis results
+  const generateRecommendations = (results: AnalysisResult) => {
+    const recommendations: Array<{
+      title: string;
+      description: string;
+      priority: 'high' | 'medium' | 'low';
+      icon: React.ReactElement;
+      action: string;
+      category: string;
+    }> = [];
+
+    // Analyze trends for recommendations
+    if (results.trends) {
+      Object.entries(results.trends).forEach(([key, trend]: [string, any]) => {
+        if (trend.direction === 'decreasing' && Math.abs(trend.change_percent) > 10) {
+          recommendations.push({
+            title: `Address Declining ${key.replace(/_/g, ' ')}`,
+            description: `Your ${key.replace(/_/g, ' ').toLowerCase()} has decreased by ${Math.abs(trend.change_percent).toFixed(1)}%. Consider reviewing your strategies in this area.`,
+            priority: 'high',
+            icon: <TrendingDown color="error" />,
+            action: 'Review marketing campaigns and pricing strategies',
+            category: 'Revenue Optimization'
+          });
+        } else if (trend.direction === 'increasing' && trend.change_percent > 15) {
+          recommendations.push({
+            title: `Scale Up ${key.replace(/_/g, ' ')} Operations`,
+            description: `Great news! Your ${key.replace(/_/g, ' ').toLowerCase()} is growing by ${trend.change_percent.toFixed(1)}%. Time to scale your operations.`,
+            priority: 'medium',
+            icon: <ArrowUpward color="success" />,
+            action: 'Increase inventory and prepare for higher demand',
+            category: 'Growth Strategy'
+          });
+        }
+      });
+    }
+
+    // Analyze predictions for recommendations
+    if (results.predictions && results.predictions.length > 0) {
+      const avgPrediction = results.predictions.reduce((sum, val) => sum + val, 0) / results.predictions.length;
+      const firstPrediction = results.predictions[0];
+      const growthRate = ((avgPrediction - firstPrediction) / firstPrediction) * 100;
+
+      if (growthRate > 10) {
+        recommendations.push({
+          title: 'Prepare for Growth Period',
+          description: `Forecasts show ${growthRate.toFixed(1)}% growth over the next week. Ensure you have adequate inventory and staffing.`,
+          priority: 'high',
+          icon: <InventoryOutlined color="primary" />,
+          action: 'Stock up on inventory and schedule extra staff',
+          category: 'Capacity Planning'
+        });
+      } else if (growthRate < -5) {
+        recommendations.push({
+          title: 'Boost Marketing Efforts',
+          description: `Forecasts suggest a potential slowdown. Consider launching promotional campaigns to maintain momentum.`,
+          priority: 'medium',
+          icon: <CampaignOutlined color="warning" />,
+          action: 'Plan promotional campaigns and special offers',
+          category: 'Marketing Strategy'
+        });
+      }
+    }
+
+    // Analyze insights for recommendations
+    if (results.insights && results.insights.length > 0) {
+      results.insights.forEach((insight) => {
+        if (insight.score > 0.7 && insight.category.toLowerCase().includes('seasonality')) {
+          recommendations.push({
+            title: 'Leverage Seasonal Patterns',
+            description: insight.message,
+            priority: 'medium',
+            icon: <Lightbulb color="info" />,
+            action: 'Plan seasonal inventory and marketing campaigns',
+            category: 'Strategic Planning'
+          });
+        } else if (insight.score > 0.6 && insight.category.toLowerCase().includes('correlation')) {
+          recommendations.push({
+            title: 'Optimize Marketing Spend',
+            description: insight.message,
+            priority: 'low',
+            icon: <PriceCheckOutlined color="success" />,
+            action: 'Analyze and adjust marketing budget allocation',
+            category: 'Cost Optimization'
+          });
+        } else if (insight.score > 0.5 && insight.category.toLowerCase().includes('anomaly')) {
+          recommendations.push({
+            title: 'Investigate Unusual Activity',
+            description: insight.message,
+            priority: 'high',
+            icon: <Warning color="warning" />,
+            action: 'Review operations for the identified time period',
+            category: 'Risk Management'
+          });
+        }
+      });
+    }
+
+    // Sort by priority
+    const priorityOrder = { high: 0, medium: 1, low: 2 };
+    return recommendations.sort((a, b) => priorityOrder[a.priority] - priorityOrder[b.priority]).slice(0, 6);
   };
 
   const renderOverview = () => (
@@ -826,6 +935,109 @@ const Dashboard: React.FC = () => {
                   );
                 })}
               </Grid>
+            </Grid>
+
+            {/* Actionable Recommendations Section */}
+            <Grid item xs={12}>
+              <Box sx={{ mt: 2 }}>
+                <Divider sx={{ my: 3 }}>
+                  <Chip 
+                    icon={<Lightbulb />} 
+                    label="WHAT SHOULD I DO?" 
+                    color="primary" 
+                    sx={{ fontSize: '0.875rem', fontWeight: 600 }}
+                  />
+                </Divider>
+                <Typography variant="body2" color="text.secondary" sx={{ mb: 3, textAlign: 'center' }}>
+                  Based on your data analysis, here are priority actions to take:
+                </Typography>
+                <Grid container spacing={2}>
+                  {generateRecommendations(analysisResults).map((recommendation, index) => (
+                    <Grid item xs={12} md={6} key={index}>
+                      <Card 
+                        variant="outlined"
+                        sx={{ 
+                          height: '100%',
+                          borderLeft: 4,
+                          borderLeftColor: 
+                            recommendation.priority === 'high' ? 'error.main' : 
+                            recommendation.priority === 'medium' ? 'warning.main' : 
+                            'success.main',
+                          '&:hover': {
+                            boxShadow: 3,
+                            transform: 'translateY(-2px)',
+                            transition: 'all 0.3s ease'
+                          }
+                        }}
+                      >
+                        <CardContent>
+                          <Box sx={{ display: 'flex', alignItems: 'flex-start', mb: 2 }}>
+                            <Box sx={{ mr: 2, mt: 0.5 }}>
+                              {recommendation.icon}
+                            </Box>
+                            <Box sx={{ flex: 1 }}>
+                              <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
+                                <Typography variant="h6" component="h3" sx={{ fontSize: '1rem', fontWeight: 600 }}>
+                                  {recommendation.title}
+                                </Typography>
+                                <Chip 
+                                  label={recommendation.priority.toUpperCase()}
+                                  size="small"
+                                  color={
+                                    recommendation.priority === 'high' ? 'error' : 
+                                    recommendation.priority === 'medium' ? 'warning' : 
+                                    'success'
+                                  }
+                                  sx={{ ml: 1 }}
+                                />
+                              </Box>
+                              <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+                                {recommendation.description}
+                              </Typography>
+                              <Box sx={{ 
+                                backgroundColor: 'action.hover', 
+                                borderRadius: 1, 
+                                p: 1.5,
+                                border: '1px dashed',
+                                borderColor: 'divider'
+                              }}>
+                                <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 0.5, fontWeight: 600 }}>
+                                  💡 Recommended Action:
+                                </Typography>
+                                <Typography variant="body2" sx={{ fontWeight: 500 }}>
+                                  {recommendation.action}
+                                </Typography>
+                              </Box>
+                              <Box sx={{ mt: 1.5, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                <Chip 
+                                  label={recommendation.category}
+                                  size="small"
+                                  variant="outlined"
+                                  sx={{ fontSize: '0.7rem' }}
+                                />
+                                <Button 
+                                  size="small" 
+                                  endIcon={<CheckCircle />}
+                                  sx={{ fontSize: '0.75rem' }}
+                                >
+                                  Mark Done
+                                </Button>
+                              </Box>
+                            </Box>
+                          </Box>
+                        </CardContent>
+                      </Card>
+                    </Grid>
+                  ))}
+                </Grid>
+                {generateRecommendations(analysisResults).length === 0 && (
+                  <Alert severity="info" sx={{ textAlign: 'center' }}>
+                    <Typography variant="body2">
+                      No specific recommendations at this time. Your business metrics look stable. Keep monitoring your data for new insights.
+                    </Typography>
+                  </Alert>
+                )}
+              </Box>
             </Grid>
           </Grid>
         </Box>
