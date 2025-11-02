@@ -8,11 +8,17 @@ import numpy as np
 from io import StringIO
 import json
 
+# Import benchmark router
+from .benchmark_routes import router as benchmark_router
+
 app = FastAPI(
     title="SME Analytics ML Services",
     description="Machine Learning services for SME Predictive Analytics Platform",
     version="1.0.0"
 )
+
+# Include benchmark routes
+app.include_router(benchmark_router)
 
 # Configure CORS
 app.add_middleware(
