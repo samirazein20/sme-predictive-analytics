@@ -3,16 +3,16 @@ FastAPI routes for benchmark data API.
 """
 
 from datetime import date
-from typing import List, Optional, Dict
+from typing import List, Optional, Dict, Any
 from fastapi import APIRouter, HTTPException, Query
 from pydantic import BaseModel, Field
 
-from ...models.benchmark_models import (
+from src.models.benchmark_models import (
     BenchmarkConfig,
     CompanySize,
     Region
 )
-from ...services.benchmark_service import BenchmarkService
+from src.services.benchmark_service import BenchmarkService
 
 
 # Request/Response models
@@ -80,12 +80,12 @@ benchmark_service = BenchmarkService()
 
 
 @router.get("/industries")
-async def get_industries() -> Dict[str, List[str]]:
+async def get_industries() -> Dict[str, Any]:
     """
     Get list of available industries.
     
     Returns:
-        Dictionary with list of industry names
+        Dictionary with list of industry names and count
     """
     try:
         industries = benchmark_service.get_available_industries()
@@ -118,7 +118,7 @@ async def get_industry_info(industry: str) -> IndustryInfoResponse:
 
 
 @router.get("/metrics/{industry}")
-async def get_industry_metrics(industry: str) -> Dict[str, List[str]]:
+async def get_industry_metrics(industry: str) -> Dict[str, Any]:
     """
     Get list of available metrics for an industry.
     

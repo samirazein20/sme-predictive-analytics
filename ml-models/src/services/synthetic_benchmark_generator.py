@@ -8,7 +8,7 @@ from datetime import date, timedelta
 from typing import List, Dict, Tuple
 from dateutil.relativedelta import relativedelta
 
-from ..models.benchmark_models import (
+from src.models.benchmark_models import (
     BenchmarkDataPoint,
     BenchmarkSeries,
     CompanySize,

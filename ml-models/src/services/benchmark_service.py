@@ -6,7 +6,7 @@ from datetime import date, timedelta
 from typing import List, Dict, Optional
 from dateutil.relativedelta import relativedelta
 
-from ..models.benchmark_models import (
+from src.models.benchmark_models import (
     BenchmarkDataPoint,
     BenchmarkSeries,
     BenchmarkComparison,
@@ -16,7 +16,7 @@ from ..models.benchmark_models import (
     Region,
     DataSource
 )
-from .synthetic_benchmark_generator import SyntheticBenchmarkGenerator
+from src.services.synthetic_benchmark_generator import SyntheticBenchmarkGenerator
 
 
 class BenchmarkService:

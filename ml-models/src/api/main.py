@@ -9,7 +9,7 @@ from io import StringIO
 import json
 
 # Import benchmark router
-from .benchmark_routes import router as benchmark_router
+from src.api.benchmark_routes import router as benchmark_router
 
 app = FastAPI(
     title="SME Analytics ML Services",
