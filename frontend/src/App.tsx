@@ -21,7 +21,10 @@ import {
   List,
   ListItem,
   ListItemIcon,
-  ListItemText
+  ListItemText,
+  Switch,
+  FormControlLabel,
+  Divider
 } from '@mui/material';
 import { 
   CloudUpload, 
@@ -32,6 +35,12 @@ import {
   Info
 } from '@mui/icons-material';
 import { apiService, FileAnalysisResponse, AnalysisResult } from './services/apiService';
+import { 
+  explainTrend, 
+  explainPredictions, 
+  explainInsight, 
+  generateOverallSummary
+} from './utils/explanationGenerator';
 
 const theme = createTheme({
   palette: {
@@ -73,6 +82,7 @@ const Dashboard: React.FC = () => {
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [isRestoring, setIsRestoring] = useState(false);
   const [restoredFromCache, setRestoredFromCache] = useState(false);
+  const [usePlainLanguage, setUsePlainLanguage] = useState(true); // Default to plain language for better UX
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Restore session on component mount
@@ -418,15 +428,40 @@ const Dashboard: React.FC = () => {
 
   const renderPredictions = () => (
     <Paper sx={{ p: 3 }}>
-      <Typography variant="h5" gutterBottom>
-        ML Predictions
-      </Typography>
-      <Typography variant="body1" paragraph>
-        AI-powered predictions from your uploaded data.
-      </Typography>
+      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+        <Box>
+          <Typography variant="h5" gutterBottom>
+            ML Predictions
+          </Typography>
+          <Typography variant="body1" color="text.secondary">
+            AI-powered predictions from your uploaded data.
+          </Typography>
+        </Box>
+        <FormControlLabel
+          control={
+            <Switch 
+              checked={usePlainLanguage}
+              onChange={(e) => setUsePlainLanguage(e.target.checked)}
+              color="primary"
+            />
+          }
+          label={usePlainLanguage ? "Plain Language" : "Technical View"}
+        />
+      </Box>
       
       {uploadedFiles.length > 0 && analysisResults ? (
         <Box>
+          {/* Overall Summary in Plain Language */}
+          {usePlainLanguage && (
+            <Alert severity="info" sx={{ mb: 3 }}>
+              <Typography variant="body1" sx={{ whiteSpace: 'pre-line' }}>
+                {generateOverallSummary(analysisResults)}
+              </Typography>
+            </Alert>
+          )}
+          
+          <Divider sx={{ my: 2 }} />
+          
           <Grid container spacing={3}>
             {/* Trend Analysis */}
             {Object.keys(analysisResults.trends).length > 0 && (
@@ -436,21 +471,47 @@ const Dashboard: React.FC = () => {
                     <Typography variant="h6" gutterBottom>
                       📈 Trend Analysis
                     </Typography>
-                    {Object.entries(analysisResults.trends).slice(0, 3).map(([key, trend]: [string, any]) => (
-                      <Box key={key} sx={{ mb: 2 }}>
-                        <Typography variant="subtitle2">{key}</Typography>
-                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                          <Chip 
-                            label={trend.direction}
-                            color={trend.direction === 'increasing' ? 'success' : 'warning'}
-                            size="small"
-                          />
-                          <Typography variant="body2">
-                            {trend.change_percent > 0 ? '+' : ''}{trend.change_percent}%
-                          </Typography>
+                    {Object.entries(analysisResults.trends).slice(0, 3).map(([key, trend]: [string, any]) => {
+                      const trendExplanation = explainTrend(key, trend);
+                      return (
+                        <Box key={key} sx={{ mb: 2 }}>
+                          {usePlainLanguage ? (
+                            <>
+                              <Typography variant="subtitle2" fontWeight="bold" sx={{ mb: 1 }}>
+                                {key.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}
+                              </Typography>
+                              <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
+                                {trendExplanation.plain}
+                              </Typography>
+                              {trendExplanation.insight && (
+                                <Alert 
+                                  severity={trend.change_percent > 0 ? "success" : trend.change_percent < -10 ? "warning" : "info"} 
+                                  sx={{ mt: 1 }}
+                                >
+                                  <Typography variant="caption">
+                                    {trendExplanation.insight}
+                                  </Typography>
+                                </Alert>
+                              )}
+                            </>
+                          ) : (
+                            <>
+                              <Typography variant="subtitle2">{key}</Typography>
+                              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                                <Chip 
+                                  label={trend.direction}
+                                  color={trend.direction === 'increasing' ? 'success' : 'warning'}
+                                  size="small"
+                                />
+                                <Typography variant="body2">
+                                  {trend.change_percent > 0 ? '+' : ''}{trend.change_percent}%
+                                </Typography>
+                              </Box>
+                            </>
+                          )}
                         </Box>
-                      </Box>
-                    ))}
+                      );
+                    })}
                   </CardContent>
                 </Card>
               </Grid>
@@ -464,16 +525,50 @@ const Dashboard: React.FC = () => {
                     <Typography variant="h6" gutterBottom>
                       🔮 Future Predictions (7 days)
                     </Typography>
-                    <Box sx={{ maxHeight: 200, overflow: 'auto' }}>
-                      {analysisResults.predictions.map((prediction, index) => (
-                        <Box key={index} sx={{ display: 'flex', justifyContent: 'space-between', py: 0.5 }}>
-                          <Typography variant="body2">Day {index + 1}:</Typography>
-                          <Typography variant="body2" fontWeight="bold">
-                            {prediction.toFixed(2)}
-                          </Typography>
-                        </Box>
-                      ))}
-                    </Box>
+                    {usePlainLanguage ? (
+                      <Box>
+                        {(() => {
+                          const predictionExplanation = explainPredictions(analysisResults.predictions);
+                          return (
+                            <>
+                              <Typography variant="body1" sx={{ mb: 2 }}>
+                                {predictionExplanation.plain}
+                              </Typography>
+                              <Alert severity={predictionExplanation.businessImpact.includes('Growth') ? 'success' : predictionExplanation.businessImpact.includes('Attention') ? 'warning' : 'info'}>
+                                <Typography variant="body2">
+                                  {predictionExplanation.businessImpact}
+                                </Typography>
+                              </Alert>
+                              <Divider sx={{ my: 2 }} />
+                              <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 1 }}>
+                                Detailed forecast values:
+                              </Typography>
+                              <Box sx={{ maxHeight: 150, overflow: 'auto' }}>
+                                {analysisResults.predictions.map((prediction, index) => (
+                                  <Box key={index} sx={{ display: 'flex', justifyContent: 'space-between', py: 0.5 }}>
+                                    <Typography variant="body2">Day {index + 1}:</Typography>
+                                    <Typography variant="body2" fontWeight="bold">
+                                      {prediction.toFixed(2)}
+                                    </Typography>
+                                  </Box>
+                                ))}
+                              </Box>
+                            </>
+                          );
+                        })()}
+                      </Box>
+                    ) : (
+                      <Box sx={{ maxHeight: 200, overflow: 'auto' }}>
+                        {analysisResults.predictions.map((prediction, index) => (
+                          <Box key={index} sx={{ display: 'flex', justifyContent: 'space-between', py: 0.5 }}>
+                            <Typography variant="body2">Day {index + 1}:</Typography>
+                            <Typography variant="body2" fontWeight="bold">
+                              {prediction.toFixed(2)}
+                            </Typography>
+                          </Box>
+                        ))}
+                      </Box>
+                    )}
                   </CardContent>
                 </Card>
               </Grid>
@@ -485,30 +580,48 @@ const Dashboard: React.FC = () => {
                 🤖 AI Insights
               </Typography>
               <Grid container spacing={2}>
-                {analysisResults.insights.map((insight, index) => (
-                  <Grid item xs={12} md={4} key={index}>
-                    <Card variant="outlined">
-                      <CardContent sx={{ p: 2 }}>
-                        <Typography variant="subtitle2" gutterBottom>
-                          {insight.title}
-                        </Typography>
-                        <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
-                          {insight.message}
-                        </Typography>
-                        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                          <Chip 
-                            label={insight.category}
-                            size="small"
-                            variant="outlined"
-                          />
-                          <Typography variant="caption" color="primary">
-                            {Math.round(insight.score * 100)}% confidence
+                {analysisResults.insights.map((insight, index) => {
+                  const insightExplanation = explainInsight(insight);
+                  return (
+                    <Grid item xs={12} md={4} key={index}>
+                      <Card variant="outlined">
+                        <CardContent sx={{ p: 2 }}>
+                          <Typography variant="subtitle2" gutterBottom>
+                            {insight.title}
                           </Typography>
-                        </Box>
-                      </CardContent>
-                    </Card>
-                  </Grid>
-                ))}
+                          {usePlainLanguage ? (
+                            <>
+                              <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
+                                {insightExplanation.plain}
+                              </Typography>
+                              <Alert severity={insight.score > 0.7 ? 'success' : insight.score > 0.4 ? 'info' : 'warning'} sx={{ mb: 1 }}>
+                                <Typography variant="caption">
+                                  {insightExplanation.actionable}
+                                </Typography>
+                              </Alert>
+                            </>
+                          ) : (
+                            <>
+                              <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
+                                {insight.message}
+                              </Typography>
+                            </>
+                          )}
+                          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                            <Chip 
+                              label={insight.category}
+                              size="small"
+                              variant="outlined"
+                            />
+                            <Typography variant="caption" color="primary">
+                              {Math.round(insight.score * 100)}% confidence
+                            </Typography>
+                          </Box>
+                        </CardContent>
+                      </Card>
+                    </Grid>
+                  );
+                })}
               </Grid>
             </Grid>
           </Grid>
