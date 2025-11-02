@@ -72,28 +72,61 @@ const Dashboard: React.FC = () => {
   const [analysisResults, setAnalysisResults] = useState<AnalysisResult | null>(null);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [isRestoring, setIsRestoring] = useState(false);
+  const [restoredFromCache, setRestoredFromCache] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Restore session on component mount
   useEffect(() => {
     const restoreSession = async () => {
-      const savedSessionId = apiService.getSavedSessionId();
-      if (savedSessionId) {
-        setIsRestoring(true);
-        try {
-          const sessionData = await apiService.getSession(savedSessionId);
-          if (sessionData && sessionData.success) {
-            setUploadedFiles([sessionData]);
-          } else {
-            // Session not found or invalid, clear it
-            apiService.clearSession();
-          }
-        } catch (error) {
-          console.error('Failed to restore session:', error);
-          apiService.clearSession();
-        } finally {
-          setIsRestoring(false);
+      setIsRestoring(true);
+      let hasRestoredData = false;
+      
+      try {
+        // Restore uploaded files from localStorage
+        const savedFiles = apiService.getUploadedFiles();
+        if (savedFiles && savedFiles.length > 0) {
+          setUploadedFiles(savedFiles);
+          hasRestoredData = true;
         }
+
+        // Restore predictions from localStorage
+        const savedPredictions = apiService.getPredictions();
+        if (savedPredictions) {
+          setAnalysisResults(savedPredictions);
+          hasRestoredData = true;
+        }
+
+        // If no local data, try to restore from backend session
+        if (!savedFiles || savedFiles.length === 0) {
+          const savedSessionId = apiService.getSavedSessionId();
+          if (savedSessionId) {
+            try {
+              const sessionData = await apiService.getSession(savedSessionId);
+              if (sessionData && sessionData.success) {
+                setUploadedFiles([sessionData]);
+                apiService.saveUploadedFiles([sessionData]);
+                hasRestoredData = true;
+              } else {
+                // Session not found or invalid, clear it
+                apiService.clearSession();
+              }
+            } catch (error) {
+              console.error('Failed to restore session from backend:', error);
+              apiService.clearSession();
+            }
+          }
+        }
+
+        // Show restoration message if data was restored
+        if (hasRestoredData) {
+          setRestoredFromCache(true);
+          // Hide the message after 5 seconds
+          setTimeout(() => setRestoredFromCache(false), 5000);
+        }
+      } catch (error) {
+        console.error('Failed to restore session:', error);
+      } finally {
+        setIsRestoring(false);
       }
     };
 
@@ -114,13 +147,20 @@ const Dashboard: React.FC = () => {
     try {
       // Upload to backend for basic analysis
       const analysisResponse = await apiService.uploadFile(file);
-      setUploadedFiles(prev => [...prev, analysisResponse]);
+      const updatedFiles = [...uploadedFiles, analysisResponse];
+      setUploadedFiles(updatedFiles);
+      
+      // Persist uploaded files to localStorage
+      apiService.saveUploadedFiles(updatedFiles);
 
       // Read file content and send to ML service for advanced analysis
       setIsAnalyzing(true);
       const fileContent = await apiService.readFileAsText(file);
       const mlAnalysis = await apiService.analyzeWithML(fileContent, analysisResponse.analysisType);
       setAnalysisResults(mlAnalysis);
+      
+      // Persist predictions to localStorage
+      apiService.savePredictions(mlAnalysis);
 
     } catch (error) {
       setUploadError(error instanceof Error ? error.message : 'Upload failed');
@@ -263,6 +303,12 @@ const Dashboard: React.FC = () => {
             Restoring your previous session...
           </Typography>
         </Box>
+      )}
+
+      {restoredFromCache && (
+        <Alert severity="info" sx={{ mb: 2 }} icon={<CheckCircle />}>
+          ✨ Previous session restored! Your files and predictions are available.
+        </Alert>
       )}
       
       <Box sx={{ mb: 2 }}>
