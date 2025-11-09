@@ -74,6 +74,13 @@
             <scope>runtime</scope>
         </dependency>
         
+        <!-- Hypersistence Utils for JSON support -->
+        <dependency>
+            <groupId>io.hypersistence</groupId>
+            <artifactId>hypersistence-utils-hibernate-63</artifactId>
+            <version>3.8.2</version>
+        </dependency>
+        
         <!-- Redis -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
