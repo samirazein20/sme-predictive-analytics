@@ -12,6 +12,8 @@ export interface FileAnalysisResponse {
   basicStatistics: Record<string, any>;
   insights: DataInsight[];
   analysisType: string;
+  conversationId?: number;
+  uploadedFileId?: number;
 }
 
 export interface DataInsight {

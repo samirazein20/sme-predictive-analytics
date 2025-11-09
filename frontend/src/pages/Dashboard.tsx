@@ -15,11 +15,10 @@ import {
   Tabs,
   Tab
 } from '@mui/material';
-import { 
-  CloudUpload, 
-  TrendingUp, 
-  Analytics, 
-  Computer 
+import {
+  CloudUpload,
+  TrendingUp,
+  Analytics
 } from '@mui/icons-material';
 
 interface TabPanelProps {
@@ -116,31 +115,6 @@ const Dashboard: React.FC = () => {
           </Card>
         </Grid>
         
-        <Grid item xs={12} sm={6} md={3}>
-          <Card sx={{ height: '100%' }}>
-            <CardContent>
-              <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
-                <Computer color="primary" sx={{ mr: 2 }} />
-                <Typography variant="h6">System Status</Typography>
-              </Box>
-              <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-                Service health status
-              </Typography>
-              <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
-                <Chip 
-                  label="Backend: Healthy"
-                  color="success"
-                  size="small"
-                />
-                <Chip 
-                  label="ML Service: Healthy"
-                  color="success"
-                  size="small"
-                />
-              </Box>
-            </CardContent>
-          </Card>
-        </Grid>
       </Grid>
 
       <Alert severity="info" sx={{ mb: 3 }}>

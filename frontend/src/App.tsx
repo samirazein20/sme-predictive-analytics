@@ -2,7 +2,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { ThemeProvider, createTheme, useTheme } from '@mui/material/styles';
 import useMediaQuery from '@mui/material/useMediaQuery';
 import CssBaseline from '@mui/material/CssBaseline';
-import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, useNavigate } from 'react-router-dom';
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
 import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs';
 import { DatePicker } from '@mui/x-date-pickers/DatePicker';
@@ -47,11 +47,10 @@ import {
   TextField,
   Snackbar
 } from '@mui/material';
-import { 
-  CloudUpload, 
-  TrendingUp, 
-  Analytics, 
-  Computer,
+import {
+  CloudUpload,
+  TrendingUp,
+  Analytics,
   CheckCircle,
   Info,
   ShowChart,
@@ -86,7 +85,8 @@ import {
   Add,
   Edit,
   Delete,
-  Save
+  Save,
+  Chat
 } from '@mui/icons-material';
 import { apiService, FileAnalysisResponse, AnalysisResult } from './services/apiService';
 import { 
@@ -114,6 +114,7 @@ import { generateTemplateCSV, formatSamplePreview } from './utils/templates';
 import { ROICalculator } from './components/ROICalculator';
 import { ShareToMobileButton } from './components/ShareToMobileButton';
 import { generatePredictionsSummary, generateAnalyticsSummary } from './utils/mobileSummary';
+import ChatPage from './pages/ChatPage';
 
 // Register Chart.js components
 ChartJS.register(
@@ -173,6 +174,7 @@ function TabPanel(props: TabPanelProps) {
 }
 
 const Dashboard: React.FC = () => {
+  const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState(0);
   const [uploadedFiles, setUploadedFiles] = useState<FileAnalysisResponse[]>([]);
   const [isUploading, setIsUploading] = useState(false);
@@ -1112,103 +1114,196 @@ const Dashboard: React.FC = () => {
 
   const renderOverview = () => (
     <>
-      <Typography variant="h2" component="h2" gutterBottom>
-        Overview Dashboard
-      </Typography>
-      
-      {/* Quick Start Section */}
-      {!quickStartCompleted && (
-        <Card 
-          sx={{ 
-            mb: 3, 
-            background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-            color: 'white',
-            position: 'relative',
-            overflow: 'hidden'
-          }}
-        >
-          <CardContent sx={{ position: 'relative', zIndex: 1 }}>
-            <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 2 }}>
-              <Box>
-                <Typography variant="h5" sx={{ fontWeight: 700, mb: 1, display: 'flex', alignItems: 'center', gap: 1 }}>
-                  ⚡ Quick Start in 5 Minutes
-                </Typography>
-                <Typography variant="body1" sx={{ mb: 2, opacity: 0.95 }}>
-                  See the platform in action with real business data. We'll guide you step-by-step.
-                </Typography>
-                <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap', mb: 1 }}>
-                  <Chip label="1. Load sample data" size="small" sx={{ bgcolor: 'rgba(255,255,255,0.2)', color: 'white' }} />
-                  <Chip label="2. View predictions" size="small" sx={{ bgcolor: 'rgba(255,255,255,0.2)', color: 'white' }} />
-                  <Chip label="3. Upload your data" size="small" sx={{ bgcolor: 'rgba(255,255,255,0.2)', color: 'white' }} />
+      {/* Hero Section - Value Proposition */}
+      <Box
+        sx={{
+          background: 'linear-gradient(135deg, #1e3c72 0%, #2a5298 100%)',
+          color: 'white',
+          borderRadius: 3,
+          p: { xs: 3, md: 5 },
+          mb: 4,
+          position: 'relative',
+          overflow: 'hidden'
+        }}
+      >
+        {/* Decorative elements */}
+        <Box sx={{
+          position: 'absolute',
+          top: -100,
+          right: -100,
+          width: 300,
+          height: 300,
+          borderRadius: '50%',
+          bgcolor: 'rgba(255,255,255,0.05)',
+          zIndex: 0
+        }} />
+        <Box sx={{
+          position: 'absolute',
+          bottom: -50,
+          left: -50,
+          width: 200,
+          height: 200,
+          borderRadius: '50%',
+          bgcolor: 'rgba(255,255,255,0.03)',
+          zIndex: 0
+        }} />
+
+        <Box sx={{ position: 'relative', zIndex: 1 }}>
+          <Typography
+            variant={isMobile ? 'h4' : 'h3'}
+            component="h1"
+            sx={{
+              fontWeight: 700,
+              mb: 2,
+              lineHeight: 1.2
+            }}
+          >
+            Smart Forecasting for Your Business
+          </Typography>
+          <Typography
+            variant={isMobile ? 'h6' : 'h5'}
+            sx={{
+              mb: 3,
+              opacity: 0.95,
+              fontWeight: 400,
+              maxWidth: 700
+            }}
+          >
+            Make better decisions with AI-powered predictions. Know what's coming next week, next month, or next quarter.
+          </Typography>
+
+          {/* Key Benefits - Business Outcomes */}
+          <Grid container spacing={2} sx={{ mb: 3, maxWidth: 900 }}>
+            <Grid item xs={12} sm={6} md={3}>
+              <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 1 }}>
+                <TrendingUp sx={{ fontSize: 24, color: '#4caf50' }} />
+                <Box>
+                  <Typography variant="body1" sx={{ fontWeight: 600 }}>
+                    Increase Revenue
+                  </Typography>
+                  <Typography variant="body2" sx={{ opacity: 0.9, fontSize: '0.875rem' }}>
+                    Optimize inventory and staffing
+                  </Typography>
                 </Box>
               </Box>
+            </Grid>
+            <Grid item xs={12} sm={6} md={3}>
+              <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 1 }}>
+                <InventoryOutlined sx={{ fontSize: 24, color: '#ff9800' }} />
+                <Box>
+                  <Typography variant="body1" sx={{ fontWeight: 600 }}>
+                    Reduce Waste
+                  </Typography>
+                  <Typography variant="body2" sx={{ opacity: 0.9, fontSize: '0.875rem' }}>
+                    Order the right amount
+                  </Typography>
+                </Box>
+              </Box>
+            </Grid>
+            <Grid item xs={12} sm={6} md={3}>
+              <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 1 }}>
+                <Assessment sx={{ fontSize: 24, color: '#2196f3' }} />
+                <Box>
+                  <Typography variant="body1" sx={{ fontWeight: 600 }}>
+                    Save Time
+                  </Typography>
+                  <Typography variant="body2" sx={{ opacity: 0.9, fontSize: '0.875rem' }}>
+                    Automated insights in minutes
+                  </Typography>
+                </Box>
+              </Box>
+            </Grid>
+            <Grid item xs={12} sm={6} md={3}>
+              <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 1 }}>
+                <CheckCircle sx={{ fontSize: 24, color: '#4caf50' }} />
+                <Box>
+                  <Typography variant="body1" sx={{ fontWeight: 600 }}>
+                    Easy to Use
+                  </Typography>
+                  <Typography variant="body2" sx={{ opacity: 0.9, fontSize: '0.875rem' }}>
+                    No data science needed
+                  </Typography>
+                </Box>
+              </Box>
+            </Grid>
+          </Grid>
+
+          {/* CTA Buttons */}
+          <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap', mt: 4 }}>
+            {!quickStartCompleted && (
               <Button
                 variant="contained"
                 size="large"
                 onClick={startQuickStart}
                 disabled={isUploading || isAnalyzing || quickStartActive}
                 sx={{
-                  bgcolor: 'white',
-                  color: '#667eea',
+                  bgcolor: '#4caf50',
+                  color: 'white',
                   fontWeight: 700,
                   px: 4,
                   py: 1.5,
-                  fontSize: '1.1rem',
+                  fontSize: isMobile ? '1rem' : '1.1rem',
                   '&:hover': {
-                    bgcolor: 'rgba(255,255,255,0.9)',
-                    transform: 'scale(1.05)',
+                    bgcolor: '#45a049',
+                    transform: 'scale(1.02)',
                     transition: 'all 0.2s'
-                  }
+                  },
+                  boxShadow: '0 4px 14px rgba(76, 175, 80, 0.4)'
                 }}
-                startIcon={quickStartActive ? <CircularProgress size={20} sx={{ color: '#667eea' }} /> : null}
+                startIcon={quickStartActive ? <CircularProgress size={20} sx={{ color: 'white' }} /> : <ArrowForward />}
               >
-                {quickStartActive ? 'Starting...' : 'Start Now'}
+                {quickStartActive ? 'Loading Demo...' : 'See It In Action'}
               </Button>
-            </Box>
-          </CardContent>
-          {/* Decorative background element */}
-          <Box sx={{
-            position: 'absolute',
-            top: -50,
-            right: -50,
-            width: 200,
-            height: 200,
-            borderRadius: '50%',
-            bgcolor: 'rgba(255,255,255,0.1)',
-            zIndex: 0
-          }} />
-        </Card>
-      )}
-      
-      {/* Quick Start Completion Badge */}
-      {quickStartCompleted && (
-        <Alert 
-          severity="success" 
-          icon={<CheckCircle />}
-          sx={{ mb: 3 }}
-          onClose={() => setQuickStartCompleted(false)}
-        >
-          <Typography variant="body2">
-            ✓ <strong>Quick Start Complete!</strong> You're all set. Upload your data to see personalized insights.
-          </Typography>
-        </Alert>
-      )}
-      
+            )}
+            <Button
+              variant="outlined"
+              size="large"
+              onClick={() => setActiveTab(1)}
+              sx={{
+                borderColor: 'white',
+                color: 'white',
+                fontWeight: 600,
+                px: 4,
+                py: 1.5,
+                fontSize: isMobile ? '1rem' : '1.1rem',
+                '&:hover': {
+                  borderColor: 'white',
+                  bgcolor: 'rgba(255,255,255,0.1)',
+                  transform: 'scale(1.02)',
+                  transition: 'all 0.2s'
+                }
+              }}
+              startIcon={<CloudUpload />}
+            >
+              Upload Your Data
+            </Button>
+          </Box>
+
+          {/* Trust Signal */}
+          <Box sx={{ mt: 3, display: 'flex', alignItems: 'center', gap: 1, opacity: 0.9 }}>
+            <Lock sx={{ fontSize: 18 }} />
+            <Typography variant="body2">
+              Your data is secure and private. We never share it with anyone.
+            </Typography>
+          </Box>
+        </Box>
+      </Box>
+
       {/* Quick Start Active Progress */}
       {quickStartActive && quickStartStep > 0 && (
-        <Alert 
-          severity="info" 
+        <Alert
+          severity="info"
           sx={{ mb: 3 }}
           icon={<Info />}
         >
           {quickStartStep === 1 && (
             <Typography variant="body2">
-              <strong>Step 1 of 3:</strong> Loading Coffee Shop sample data... ☕
+              <strong>Step 1 of 3:</strong> Loading Coffee Shop sample data...
             </Typography>
           )}
           {quickStartStep === 2 && (
             <Typography variant="body2">
-              <strong>Step 2 of 3:</strong> Here's what you'd see with YOUR data! Check out the predictions, trends, and recommendations below. 📊
+              <strong>Step 2 of 3:</strong> Here's what you'll see with YOUR data! Check out the predictions, trends, and recommendations below.
             </Typography>
           )}
           {quickStartStep === 3 && (
@@ -1217,15 +1312,15 @@ const Dashboard: React.FC = () => {
                 <strong>Step 3 of 3:</strong> Ready to see insights for your business?
               </Typography>
               <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
-                <Button 
-                  size="small" 
+                <Button
+                  size="small"
                   variant="contained"
                   onClick={() => { setActiveTab(1); completeQuickStart(); }}
                 >
                   Upload My Data
                 </Button>
-                <Button 
-                  size="small" 
+                <Button
+                  size="small"
                   variant="outlined"
                   onClick={completeQuickStart}
                 >
@@ -1236,103 +1331,466 @@ const Dashboard: React.FC = () => {
           )}
         </Alert>
       )}
-      
-      <Grid container spacing={3} sx={{ mb: 3 }}>
-        <Grid item xs={12} sm={6} md={3}>
-          <Card sx={{ height: '100%', cursor: 'pointer' }} onClick={() => setActiveTab(1)}>
-            <CardContent>
-              <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
-                <CloudUpload color="primary" sx={{ mr: 2 }} />
-                <Typography variant="h6" component="h3">Data Upload</Typography>
-              </Box>
-              <Typography variant="body2" color="text.secondary">
-                Upload CSV/Excel files for analysis
-              </Typography>
-              <Typography variant="h3" component="div" color="primary" sx={{ mt: 2, fontSize: '2.125rem' }} aria-label={`${uploadedFiles.length} files uploaded`}>
-                {uploadedFiles.length}
-              </Typography>
-              <Typography variant="caption" color="text.secondary">
-                Files uploaded
-              </Typography>
-            </CardContent>
-          </Card>
-        </Grid>
-        
-        <Grid item xs={12} sm={6} md={3}>
-          <Card sx={{ height: '100%', cursor: 'pointer' }} onClick={() => setActiveTab(2)}>
-            <CardContent>
-              <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
-                <TrendingUp color="primary" sx={{ mr: 2 }} />
-                <Typography variant="h6" component="h3">ML Predictions</Typography>
-              </Box>
-              <Typography variant="body2" color="text.secondary">
-                Generate AI-powered forecasts
-              </Typography>
-              <Typography variant="h3" component="div" color="primary" sx={{ mt: 2, fontSize: '2.125rem' }} aria-label={`${analysisResults?.predictions?.length || 0} active predictions`}>
-                {analysisResults?.predictions?.length || 0}
-              </Typography>
-              <Typography variant="caption" color="text.secondary">
-                Active predictions
-              </Typography>
-            </CardContent>
-          </Card>
-        </Grid>
-        
-        <Grid item xs={12} sm={6} md={3}>
-          <Card sx={{ height: '100%', cursor: 'pointer' }} onClick={() => setActiveTab(3)}>
-            <CardContent>
-              <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
-                <Analytics color="primary" sx={{ mr: 2 }} />
-                <Typography variant="h6" component="h3">Analytics</Typography>
-              </Box>
-              <Typography variant="body2" color="text.secondary">
-                View insights and reports
-              </Typography>
-              <Typography variant="h3" component="div" color="primary" sx={{ mt: 2, fontSize: '2.125rem' }} aria-label="Unlimited insights available">
-                ∞
-              </Typography>
-              <Typography variant="caption" color="text.secondary">
-                Insights available
-              </Typography>
-            </CardContent>
-          </Card>
-        </Grid>
-        
-        <Grid item xs={12} sm={6} md={3}>
-          <Card sx={{ height: '100%' }}>
-            <CardContent>
-              <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
-                <Computer color="primary" sx={{ mr: 2 }} />
-                <Typography variant="h6" component="h3">System Status</Typography>
-              </Box>
-              <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-                Service health status
-              </Typography>
-              <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
-                <Chip 
-                  label="Backend: Healthy"
-                  color="success"
-                  size="small"
-                />
-                <Chip 
-                  label="ML Service: Healthy"
-                  color="success"
-                  size="small"
-                />
-                <Chip 
-                  label="Ollama: Healthy"
-                  color="success"
-                  size="small"
-                />
-              </Box>
-            </CardContent>
-          </Card>
-        </Grid>
-      </Grid>
 
-      <Alert severity="success" sx={{ mb: 3 }} role="status" aria-live="polite">
-        🎉 All services are running successfully! Your interactive analytics platform is ready to use.
-      </Alert>
+      {/* Quick Start Completion Badge */}
+      {quickStartCompleted && (
+        <Alert
+          severity="success"
+          icon={<CheckCircle />}
+          sx={{ mb: 3 }}
+        >
+          <Typography variant="body2">
+            <strong>Great!</strong> You've seen what this platform can do. Upload your data to get personalized insights for your business.
+          </Typography>
+        </Alert>
+      )}
+
+      {/* How It Works - Simple 3-Step Process */}
+      <Box sx={{ mb: 5 }}>
+        <Typography
+          variant="h4"
+          component="h2"
+          align="center"
+          sx={{ mb: 1, fontWeight: 700 }}
+        >
+          How It Works
+        </Typography>
+        <Typography
+          variant="body1"
+          align="center"
+          color="text.secondary"
+          sx={{ mb: 4, maxWidth: 600, mx: 'auto' }}
+        >
+          Get started in 3 simple steps. No training required.
+        </Typography>
+
+        <Grid container spacing={3}>
+          <Grid item xs={12} md={4}>
+            <Card
+              sx={{
+                height: '100%',
+                textAlign: 'center',
+                transition: 'all 0.3s',
+                cursor: 'pointer',
+                '&:hover': {
+                  transform: 'translateY(-4px)',
+                  boxShadow: 4
+                }
+              }}
+              onClick={() => setActiveTab(1)}
+            >
+              <CardContent sx={{ p: 3 }}>
+                <Box
+                  sx={{
+                    width: 64,
+                    height: 64,
+                    borderRadius: '50%',
+                    bgcolor: 'primary.light',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    mx: 'auto',
+                    mb: 2
+                  }}
+                >
+                  <CloudUpload sx={{ fontSize: 32, color: 'primary.main' }} />
+                </Box>
+                <Typography variant="h6" sx={{ fontWeight: 700, mb: 1 }}>
+                  1. Upload Your Data
+                </Typography>
+                <Typography variant="body2" color="text.secondary">
+                  Simply drag and drop your sales spreadsheet. CSV or Excel format works perfectly.
+                </Typography>
+              </CardContent>
+            </Card>
+          </Grid>
+
+          <Grid item xs={12} md={4}>
+            <Card
+              sx={{
+                height: '100%',
+                textAlign: 'center',
+                transition: 'all 0.3s',
+                cursor: 'pointer',
+                '&:hover': {
+                  transform: 'translateY(-4px)',
+                  boxShadow: 4
+                }
+              }}
+              onClick={() => setActiveTab(2)}
+            >
+              <CardContent sx={{ p: 3 }}>
+                <Box
+                  sx={{
+                    width: 64,
+                    height: 64,
+                    borderRadius: '50%',
+                    bgcolor: 'success.light',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    mx: 'auto',
+                    mb: 2
+                  }}
+                >
+                  <TrendingUp sx={{ fontSize: 32, color: 'success.main' }} />
+                </Box>
+                <Typography variant="h6" sx={{ fontWeight: 700, mb: 1 }}>
+                  2. Get Predictions
+                </Typography>
+                <Typography variant="body2" color="text.secondary">
+                  Our AI analyzes your data and generates accurate forecasts for the next 7 days.
+                </Typography>
+              </CardContent>
+            </Card>
+          </Grid>
+
+          <Grid item xs={12} md={4}>
+            <Card
+              sx={{
+                height: '100%',
+                textAlign: 'center',
+                transition: 'all 0.3s',
+                cursor: 'pointer',
+                '&:hover': {
+                  transform: 'translateY(-4px)',
+                  boxShadow: 4
+                }
+              }}
+              onClick={() => setActiveTab(3)}
+            >
+              <CardContent sx={{ p: 3 }}>
+                <Box
+                  sx={{
+                    width: 64,
+                    height: 64,
+                    borderRadius: '50%',
+                    bgcolor: 'warning.light',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    mx: 'auto',
+                    mb: 2
+                  }}
+                >
+                  <Lightbulb sx={{ fontSize: 32, color: 'warning.main' }} />
+                </Box>
+                <Typography variant="h6" sx={{ fontWeight: 700, mb: 1 }}>
+                  3. Take Action
+                </Typography>
+                <Typography variant="body2" color="text.secondary">
+                  Get clear recommendations on inventory, staffing, and marketing based on your forecast.
+                </Typography>
+              </CardContent>
+            </Card>
+          </Grid>
+        </Grid>
+      </Box>
+
+      {/* Industry Use Cases - Social Proof */}
+      <Box sx={{ mb: 5 }}>
+        <Typography
+          variant="h4"
+          component="h2"
+          align="center"
+          sx={{ mb: 1, fontWeight: 700 }}
+        >
+          Built for Your Business
+        </Typography>
+        <Typography
+          variant="body1"
+          align="center"
+          color="text.secondary"
+          sx={{ mb: 4, maxWidth: 600, mx: 'auto' }}
+        >
+          Whether you run a cafe, retail store, or restaurant, get insights tailored to your industry.
+        </Typography>
+
+        <Grid container spacing={3}>
+          <Grid item xs={12} sm={6} md={3}>
+            <Card
+              sx={{
+                height: '100%',
+                transition: 'all 0.3s',
+                '&:hover': {
+                  boxShadow: 4
+                }
+              }}
+            >
+              <CardContent>
+                <Box sx={{ display: 'flex', alignItems: 'center', mb: 2, gap: 1 }}>
+                  <Storefront sx={{ fontSize: 32, color: '#6366f1' }} />
+                  <Typography variant="h6" sx={{ fontWeight: 600 }}>
+                    Coffee Shops
+                  </Typography>
+                </Box>
+                <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+                  Predict daily foot traffic and optimize staffing. Never run out of popular items during peak hours.
+                </Typography>
+                <Chip label="Sample Available" size="small" color="primary" variant="outlined" />
+              </CardContent>
+            </Card>
+          </Grid>
+
+          <Grid item xs={12} sm={6} md={3}>
+            <Card
+              sx={{
+                height: '100%',
+                transition: 'all 0.3s',
+                '&:hover': {
+                  boxShadow: 4
+                }
+              }}
+            >
+              <CardContent>
+                <Box sx={{ display: 'flex', alignItems: 'center', mb: 2, gap: 1 }}>
+                  <Restaurant sx={{ fontSize: 32, color: '#f59e0b' }} />
+                  <Typography variant="h6" sx={{ fontWeight: 600 }}>
+                    Restaurants
+                  </Typography>
+                </Box>
+                <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+                  Forecast reservations and reduce food waste. Plan ingredient orders with confidence.
+                </Typography>
+                <Chip label="Sample Available" size="small" color="primary" variant="outlined" />
+              </CardContent>
+            </Card>
+          </Grid>
+
+          <Grid item xs={12} sm={6} md={3}>
+            <Card
+              sx={{
+                height: '100%',
+                transition: 'all 0.3s',
+                '&:hover': {
+                  boxShadow: 4
+                }
+              }}
+            >
+              <CardContent>
+                <Box sx={{ display: 'flex', alignItems: 'center', mb: 2, gap: 1 }}>
+                  <ShoppingCart sx={{ fontSize: 32, color: '#10b981' }} />
+                  <Typography variant="h6" sx={{ fontWeight: 600 }}>
+                    Retail Stores
+                  </Typography>
+                </Box>
+                <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+                  Anticipate demand for seasonal items and optimize inventory. Reduce overstock and stockouts.
+                </Typography>
+                <Chip label="Sample Available" size="small" color="primary" variant="outlined" />
+              </CardContent>
+            </Card>
+          </Grid>
+
+          <Grid item xs={12} sm={6} md={3}>
+            <Card
+              sx={{
+                height: '100%',
+                transition: 'all 0.3s',
+                '&:hover': {
+                  boxShadow: 4
+                }
+              }}
+            >
+              <CardContent>
+                <Box sx={{ display: 'flex', alignItems: 'center', mb: 2, gap: 1 }}>
+                  <Assessment sx={{ fontSize: 32, color: '#8b5cf6' }} />
+                  <Typography variant="h6" sx={{ fontWeight: 600 }}>
+                    Service Business
+                  </Typography>
+                </Box>
+                <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+                  Forecast customer bookings and optimize team schedules. Plan capacity and resources ahead.
+                </Typography>
+                <Chip label="Custom Template" size="small" color="secondary" variant="outlined" />
+              </CardContent>
+            </Card>
+          </Grid>
+        </Grid>
+      </Box>
+
+      {/* Current Status Cards - Dashboard Metrics */}
+      <Box sx={{ mb: 4 }}>
+        <Typography
+          variant="h5"
+          component="h2"
+          sx={{ mb: 3, fontWeight: 600 }}
+        >
+          Your Dashboard
+        </Typography>
+        <Grid container spacing={3}>
+          <Grid item xs={12} sm={6} md={4}>
+            <Card
+              sx={{
+                height: '100%',
+                cursor: 'pointer',
+                transition: 'all 0.3s',
+                border: uploadedFiles.length > 0 ? '2px solid' : '1px solid',
+                borderColor: uploadedFiles.length > 0 ? 'success.main' : 'divider',
+                '&:hover': {
+                  boxShadow: 4,
+                  transform: 'translateY(-2px)'
+                }
+              }}
+              onClick={() => setActiveTab(1)}
+            >
+              <CardContent>
+                <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
+                  <CloudUpload color="primary" sx={{ mr: 2, fontSize: 32 }} />
+                  <Typography variant="h6" component="h3" sx={{ fontWeight: 600 }}>
+                    Data Uploaded
+                  </Typography>
+                </Box>
+                <Typography variant="h3" component="div" color="primary" sx={{ mb: 1, fontSize: '2.5rem', fontWeight: 700 }} aria-label={`${uploadedFiles.length} files uploaded`}>
+                  {uploadedFiles.length}
+                </Typography>
+                <Typography variant="body2" color="text.secondary">
+                  {uploadedFiles.length === 0 ? 'Upload your first file to begin' : `${uploadedFiles.length === 1 ? 'File' : 'Files'} ready for analysis`}
+                </Typography>
+              </CardContent>
+            </Card>
+          </Grid>
+
+          <Grid item xs={12} sm={6} md={4}>
+            <Card
+              sx={{
+                height: '100%',
+                cursor: 'pointer',
+                transition: 'all 0.3s',
+                border: analysisResults?.predictions?.length ? '2px solid' : '1px solid',
+                borderColor: analysisResults?.predictions?.length ? 'success.main' : 'divider',
+                '&:hover': {
+                  boxShadow: 4,
+                  transform: 'translateY(-2px)'
+                }
+              }}
+              onClick={() => setActiveTab(2)}
+            >
+              <CardContent>
+                <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
+                  <TrendingUp color="primary" sx={{ mr: 2, fontSize: 32 }} />
+                  <Typography variant="h6" component="h3" sx={{ fontWeight: 600 }}>
+                    Predictions
+                  </Typography>
+                </Box>
+                <Typography variant="h3" component="div" color="primary" sx={{ mb: 1, fontSize: '2.5rem', fontWeight: 700 }} aria-label={`${analysisResults?.predictions?.length || 0} active predictions`}>
+                  {analysisResults?.predictions?.length || 0}
+                </Typography>
+                <Typography variant="body2" color="text.secondary">
+                  {analysisResults?.predictions?.length ? 'Forecasts ready to view' : 'Generate your first forecast'}
+                </Typography>
+              </CardContent>
+            </Card>
+          </Grid>
+
+          <Grid item xs={12} sm={6} md={4}>
+            <Card
+              sx={{
+                height: '100%',
+                cursor: 'pointer',
+                transition: 'all 0.3s',
+                border: analysisResults?.insights?.length ? '2px solid' : '1px solid',
+                borderColor: analysisResults?.insights?.length ? 'success.main' : 'divider',
+                '&:hover': {
+                  boxShadow: 4,
+                  transform: 'translateY(-2px)'
+                }
+              }}
+              onClick={() => setActiveTab(3)}
+            >
+              <CardContent>
+                <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
+                  <Lightbulb color="primary" sx={{ mr: 2, fontSize: 32 }} />
+                  <Typography variant="h6" component="h3" sx={{ fontWeight: 600 }}>
+                    Insights
+                  </Typography>
+                </Box>
+                <Typography variant="h3" component="div" color="primary" sx={{ mb: 1, fontSize: '2.5rem', fontWeight: 700 }}>
+                  {analysisResults?.insights?.length || 0}
+                </Typography>
+                <Typography variant="body2" color="text.secondary">
+                  {analysisResults?.insights?.length ? 'Business insights discovered' : 'Insights appear after analysis'}
+                </Typography>
+              </CardContent>
+            </Card>
+          </Grid>
+        </Grid>
+      </Box>
+
+      {/* Trust Signals - Security and Privacy */}
+      <Card
+        sx={{
+          bgcolor: '#f8f9fa',
+          border: '1px solid #e0e0e0'
+        }}
+      >
+        <CardContent sx={{ p: 3 }}>
+          <Grid container spacing={3} alignItems="center">
+            <Grid item xs={12} md={8}>
+              <Typography variant="h6" sx={{ fontWeight: 600, mb: 1.5 }}>
+                Your Data. Your Privacy. Guaranteed.
+              </Typography>
+              <Grid container spacing={2}>
+                <Grid item xs={12} sm={6}>
+                  <Box sx={{ display: 'flex', gap: 1, alignItems: 'flex-start' }}>
+                    <CheckCircle sx={{ fontSize: 20, color: 'success.main', mt: 0.3 }} />
+                    <Box>
+                      <Typography variant="body2" sx={{ fontWeight: 600 }}>
+                        Bank-Level Encryption
+                      </Typography>
+                      <Typography variant="caption" color="text.secondary">
+                        AES-256 encryption at rest and in transit
+                      </Typography>
+                    </Box>
+                  </Box>
+                </Grid>
+                <Grid item xs={12} sm={6}>
+                  <Box sx={{ display: 'flex', gap: 1, alignItems: 'flex-start' }}>
+                    <CheckCircle sx={{ fontSize: 20, color: 'success.main', mt: 0.3 }} />
+                    <Box>
+                      <Typography variant="body2" sx={{ fontWeight: 600 }}>
+                        Never Shared or Sold
+                      </Typography>
+                      <Typography variant="caption" color="text.secondary">
+                        Your data stays private, always
+                      </Typography>
+                    </Box>
+                  </Box>
+                </Grid>
+                <Grid item xs={12} sm={6}>
+                  <Box sx={{ display: 'flex', gap: 1, alignItems: 'flex-start' }}>
+                    <CheckCircle sx={{ fontSize: 20, color: 'success.main', mt: 0.3 }} />
+                    <Box>
+                      <Typography variant="body2" sx={{ fontWeight: 600 }}>
+                        You Control Your Data
+                      </Typography>
+                      <Typography variant="caption" color="text.secondary">
+                        Delete anytime, no questions asked
+                      </Typography>
+                    </Box>
+                  </Box>
+                </Grid>
+                <Grid item xs={12} sm={6}>
+                  <Box sx={{ display: 'flex', gap: 1, alignItems: 'flex-start' }}>
+                    <CheckCircle sx={{ fontSize: 20, color: 'success.main', mt: 0.3 }} />
+                    <Box>
+                      <Typography variant="body2" sx={{ fontWeight: 600 }}>
+                        Compliance Ready
+                      </Typography>
+                      <Typography variant="caption" color="text.secondary">
+                        GDPR, SOC 2, and industry standards
+                      </Typography>
+                    </Box>
+                  </Box>
+                </Grid>
+              </Grid>
+            </Grid>
+            <Grid item xs={12} md={4} sx={{ textAlign: { xs: 'left', md: 'center' } }}>
+              <Lock sx={{ fontSize: 80, color: 'primary.main', opacity: 0.8 }} />
+            </Grid>
+          </Grid>
+        </CardContent>
+      </Card>
     </>
   );
 
@@ -1589,7 +2047,23 @@ const Dashboard: React.FC = () => {
           </Typography>
           <List>
             {uploadedFiles.map((fileAnalysis, index) => (
-              <ListItem key={index} divider>
+              <ListItem
+                key={index}
+                divider
+                secondaryAction={
+                  fileAnalysis.conversationId && (
+                    <Button
+                      variant="contained"
+                      color="primary"
+                      startIcon={<Chat />}
+                      onClick={() => navigate(`/chat/${fileAnalysis.conversationId}`)}
+                      size="small"
+                    >
+                      Chat with Data
+                    </Button>
+                  )
+                }
+              >
                 <ListItemIcon>
                   <CheckCircle color="success" />
                 </ListItemIcon>
@@ -2953,7 +3427,6 @@ Upload CSV or Excel files with your business data to get started.`}
           <Typography variant={isMobile ? "h6" : "h5"} component="h1" sx={{ flexGrow: 1 }}>
             {isMobile ? 'SME Analytics' : 'SME Analytics Platform'}
           </Typography>
-          {!isMobile && <Chip label="All Systems Operational" color="success" variant="outlined" />}
         </Toolbar>
         <Tabs 
           value={activeTab} 
@@ -3422,6 +3895,7 @@ function App() {
       <Router>
         <Routes>
           <Route path="/" element={<Dashboard />} />
+          <Route path="/chat/:conversationId" element={<ChatPage />} />
         </Routes>
       </Router>
     </ThemeProvider>

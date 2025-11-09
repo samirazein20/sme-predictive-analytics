@@ -10,6 +10,8 @@ import json
 
 # Import benchmark router
 from src.api.benchmark_routes import router as benchmark_router
+# Import chat router
+from src.api.chat_routes import router as chat_router
 
 app = FastAPI(
     title="SME Analytics ML Services",
@@ -19,6 +21,8 @@ app = FastAPI(
 
 # Include benchmark routes
 app.include_router(benchmark_router)
+# Include chat routes
+app.include_router(chat_router)
 
 # Configure CORS
 app.add_middleware(

@@ -2,20 +2,44 @@ package com.sme.analytics.service;
 
 import com.sme.analytics.dto.FileAnalysisResponse;
 import com.sme.analytics.dto.DataInsight;
+import com.sme.analytics.model.Conversation;
+import com.sme.analytics.model.UploadedFile;
+import com.sme.analytics.model.User;
+import com.sme.analytics.repository.UploadedFileRepository;
+import com.sme.analytics.repository.UserRepository;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
+import java.time.LocalDateTime;
 import java.util.*;
 
 @Service
 public class DataAnalysisService {
 
+    private static final Logger logger = LoggerFactory.getLogger(DataAnalysisService.class);
+
     @Autowired
     private SessionService sessionService;
+
+    @Autowired
+    private UserRepository userRepository;
+
+    @Autowired
+    private UploadedFileRepository uploadedFileRepository;
+
+    @Autowired
+    private ChatService chatService;
+
+    @Autowired
+    private ObjectMapper objectMapper;
 
     private final Map<String, List<DataInsight>> sessionInsights = new HashMap<>();
 
@@ -30,33 +54,87 @@ public class DataAnalysisService {
         }
     }
 
+    @Transactional
     private FileAnalysisResponse analyzeCsvFile(MultipartFile file, String sessionId) throws IOException {
         List<String> lines = new ArrayList<>();
         List<String> columnNames = new ArrayList<>();
-        
+        StringBuilder csvContent = new StringBuilder();
+
         try (BufferedReader reader = new BufferedReader(new InputStreamReader(file.getInputStream()))) {
             String line;
             boolean firstLine = true;
-            
+
             while ((line = reader.readLine()) != null) {
                 lines.add(line);
+                csvContent.append(line).append("\n");
                 if (firstLine) {
                     columnNames = Arrays.asList(line.split(","));
                     firstLine = false;
                 }
             }
         }
-        
+
         int rowCount = lines.size() - 1; // Excluding header
         int columnCount = columnNames.size();
-        
+
         // Basic statistics and insights
         Map<String, Object> basicStats = generateBasicStatistics(lines, columnNames);
         List<DataInsight> insights = generateInsights(lines, columnNames, file.getOriginalFilename());
-        
+        String analysisType = detectAnalysisType(columnNames);
+
         // Store in session
         sessionInsights.put(sessionId, insights);
-        
+
+        // Persist uploaded file to database
+        Long uploadedFileId = null;
+        Long conversationId = null;
+
+        try {
+            // Get default user (ID 1) - or create if doesn't exist
+            User user = userRepository.findById(1L)
+                .orElseGet(() -> createDefaultUser());
+
+            // Create UploadedFile entity
+            UploadedFile uploadedFile = new UploadedFile();
+            uploadedFile.setUser(user);
+            uploadedFile.setSessionId(sessionId);
+            uploadedFile.setFileName(file.getOriginalFilename());
+            uploadedFile.setFileType(getFileExtension(file.getOriginalFilename()));
+            uploadedFile.setFileSize(file.getSize());
+            uploadedFile.setFileContent(csvContent.toString());
+            uploadedFile.setAnalysisType(analysisType);
+            uploadedFile.setRowCount(rowCount);
+            uploadedFile.setColumnCount(columnCount);
+            uploadedFile.setAnalyzedAt(LocalDateTime.now());
+
+            // Convert insights and statistics to JSON
+            try {
+                uploadedFile.setInsights(objectMapper.writeValueAsString(insights));
+                uploadedFile.setStatistics(objectMapper.writeValueAsString(basicStats));
+            } catch (Exception e) {
+                logger.error("Error serializing insights/statistics", e);
+            }
+
+            // Save uploaded file
+            uploadedFile = uploadedFileRepository.save(uploadedFile);
+            uploadedFileId = uploadedFile.getId();
+
+            // Create conversation automatically
+            Conversation conversation = chatService.createConversation(
+                user.getId(),
+                uploadedFileId,
+                "Chat about " + file.getOriginalFilename()
+            );
+            conversationId = conversation.getId();
+
+            logger.info("Created uploaded file (ID: {}) and conversation (ID: {}) for session {}",
+                uploadedFileId, conversationId, sessionId);
+
+        } catch (Exception e) {
+            logger.error("Error persisting uploaded file or creating conversation", e);
+            // Continue even if persistence fails - backward compatibility
+        }
+
         FileAnalysisResponse response = FileAnalysisResponse.builder()
             .success(true)
             .message("File analyzed successfully")
@@ -68,12 +146,31 @@ public class DataAnalysisService {
             .columnNames(columnNames)
             .basicStatistics(basicStats)
             .insights(insights)
-            .analysisType(detectAnalysisType(columnNames))
+            .analysisType(analysisType)
+            .uploadedFileId(uploadedFileId)
+            .conversationId(conversationId)
             .build();
-            
+
         // Save to session
         sessionService.saveSession(sessionId, response);
         return response;
+    }
+
+    private User createDefaultUser() {
+        User user = new User();
+        user.setUsername("admin");
+        user.setEmail("admin@smeanalytics.com");
+        user.setPasswordHash("$2a$10$VPNz3WZ.TqKVHQJQVqG3iOvJLj7r7xXx8BqG3TqKVHQJQVqG3iOvJLj");
+        user.setFullName("System Administrator");
+        user.setRole("ADMIN");
+        user.setActive(true);
+        return userRepository.save(user);
+    }
+
+    private String getFileExtension(String fileName) {
+        if (fileName == null) return "csv";
+        int lastDot = fileName.lastIndexOf('.');
+        return lastDot > 0 ? fileName.substring(lastDot + 1).toLowerCase() : "csv";
     }
 
     private Map<String, Object> generateBasicStatistics(List<String> lines, List<String> columnNames) {
