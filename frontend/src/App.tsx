@@ -1,5 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { ThemeProvider, createTheme } from '@mui/material/styles';
+import { ThemeProvider, createTheme, useTheme } from '@mui/material/styles';
+import useMediaQuery from '@mui/material/useMediaQuery';
 import CssBaseline from '@mui/material/CssBaseline';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
@@ -22,6 +23,7 @@ import {
   Tabs,
   Tab,
   LinearProgress,
+  CircularProgress,
   List,
   ListItem,
   ListItemIcon,
@@ -107,6 +109,11 @@ import {
   Legend
 } from 'chart.js';
 import { Line, Bar } from 'react-chartjs-2';
+import { DataRequirementsChecklistModal } from './components/DataRequirementsChecklistModal';
+import { generateTemplateCSV, formatSamplePreview } from './utils/templates';
+import { ROICalculator } from './components/ROICalculator';
+import { ShareToMobileButton } from './components/ShareToMobileButton';
+import { generatePredictionsSummary, generateAnalyticsSummary } from './utils/mobileSummary';
 
 // Register Chart.js components
 ChartJS.register(
@@ -203,6 +210,18 @@ const Dashboard: React.FC = () => {
     includeRecommendations: true,
     includeCharts: false, // Optional for future chart export
   });
+  // Data Requirements modal state
+  const [dataReqOpen, setDataReqOpen] = useState(false);
+  // Sample template preview hover state
+  const [templatePreview, setTemplatePreview] = useState<string | null>(null);
+  const [previewAnchor, setPreviewAnchor] = useState<HTMLElement | null>(null);
+  
+  // Quick Start flow state
+  const [quickStartActive, setQuickStartActive] = useState(false);
+  const [quickStartStep, setQuickStartStep] = useState(0);
+  const [quickStartCompleted, setQuickStartCompleted] = useState(() => {
+    return localStorage.getItem('quickStartCompleted') === 'true';
+  });
 
   // Comparison Mode state - Multi-period support
   interface Period {
@@ -267,6 +286,17 @@ const Dashboard: React.FC = () => {
       }, 1000);
     }
   }, []);
+
+  // Mobile responsive hooks
+  const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down('sm')); // <600px
+  // const isTablet = useMediaQuery(theme.breakpoints.between('sm', 'md')); // 600-900px - reserved for future enhancements
+  // const isDesktop = useMediaQuery(theme.breakpoints.up('md')); // >900px - reserved for future enhancements
+
+  // State for progressive disclosure on mobile
+  const [showAllPredictions, setShowAllPredictions] = useState(false);
+  const [showAllAnalytics, setShowAllAnalytics] = useState(false);
+  const [shareDialogOpen, setShareDialogOpen] = useState(false);
 
   // Load saved export template preferences
   useEffect(() => {
@@ -821,35 +851,7 @@ const Dashboard: React.FC = () => {
     return { value: delta, percentage, direction };
   };
 
-  // Multi-period delta calculation
-  const calculateMultiPeriodDeltas = (metricKey: string) => {
-    const deltas: Array<{
-      fromPeriod: string;
-      toPeriod: string;
-      value: number;
-      percentage: number;
-      direction: 'up' | 'down' | 'neutral';
-    }> = [];
-
-    for (let i = 0; i < periods.length - 1; i++) {
-      const periodA = periods[i];
-      const periodB = periods[i + 1];
-      
-      if (periodA.results?.trends && periodB.results?.trends) {
-        const valueA = periodA.results.trends[metricKey]?.latest_value;
-        const valueB = periodB.results.trends[metricKey]?.latest_value;
-        const delta = calculateDelta(valueA, valueB);
-        
-        deltas.push({
-          fromPeriod: periodA.label,
-          toPeriod: periodB.label,
-          ...delta,
-        });
-      }
-    }
-
-    return deltas;
-  };
+  
 
   // Schedule Management Functions
   const fetchSchedules = async () => {
@@ -979,6 +981,33 @@ const Dashboard: React.FC = () => {
     }
   }, [activeTab]);
 
+  // Quick Start guided flow handler
+  const startQuickStart = async () => {
+    setQuickStartActive(true);
+    setQuickStartStep(1);
+    
+    // Step 1: Auto-load Coffee Shop sample data
+    await handleLoadSampleData('retail');
+    
+    // Step 2: Navigate to Predictions after a brief delay
+    setTimeout(() => {
+      setQuickStartStep(2);
+      setActiveTab(2); // Switch to Predictions tab
+    }, 2000);
+    
+    // Step 3: After showing predictions, prompt for upload
+    setTimeout(() => {
+      setQuickStartStep(3);
+    }, 5000);
+  };
+
+  const completeQuickStart = () => {
+    setQuickStartCompleted(true);
+    setQuickStartActive(false);
+    setQuickStartStep(0);
+    localStorage.setItem('quickStartCompleted', 'true');
+  };
+
   // Generate actionable recommendations based on analysis results
   const generateRecommendations = (results: AnalysisResult) => {
     const recommendations: Array<{
@@ -1087,6 +1116,127 @@ const Dashboard: React.FC = () => {
         Overview Dashboard
       </Typography>
       
+      {/* Quick Start Section */}
+      {!quickStartCompleted && (
+        <Card 
+          sx={{ 
+            mb: 3, 
+            background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+            color: 'white',
+            position: 'relative',
+            overflow: 'hidden'
+          }}
+        >
+          <CardContent sx={{ position: 'relative', zIndex: 1 }}>
+            <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 2 }}>
+              <Box>
+                <Typography variant="h5" sx={{ fontWeight: 700, mb: 1, display: 'flex', alignItems: 'center', gap: 1 }}>
+                  ⚡ Quick Start in 5 Minutes
+                </Typography>
+                <Typography variant="body1" sx={{ mb: 2, opacity: 0.95 }}>
+                  See the platform in action with real business data. We'll guide you step-by-step.
+                </Typography>
+                <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap', mb: 1 }}>
+                  <Chip label="1. Load sample data" size="small" sx={{ bgcolor: 'rgba(255,255,255,0.2)', color: 'white' }} />
+                  <Chip label="2. View predictions" size="small" sx={{ bgcolor: 'rgba(255,255,255,0.2)', color: 'white' }} />
+                  <Chip label="3. Upload your data" size="small" sx={{ bgcolor: 'rgba(255,255,255,0.2)', color: 'white' }} />
+                </Box>
+              </Box>
+              <Button
+                variant="contained"
+                size="large"
+                onClick={startQuickStart}
+                disabled={isUploading || isAnalyzing || quickStartActive}
+                sx={{
+                  bgcolor: 'white',
+                  color: '#667eea',
+                  fontWeight: 700,
+                  px: 4,
+                  py: 1.5,
+                  fontSize: '1.1rem',
+                  '&:hover': {
+                    bgcolor: 'rgba(255,255,255,0.9)',
+                    transform: 'scale(1.05)',
+                    transition: 'all 0.2s'
+                  }
+                }}
+                startIcon={quickStartActive ? <CircularProgress size={20} sx={{ color: '#667eea' }} /> : null}
+              >
+                {quickStartActive ? 'Starting...' : 'Start Now'}
+              </Button>
+            </Box>
+          </CardContent>
+          {/* Decorative background element */}
+          <Box sx={{
+            position: 'absolute',
+            top: -50,
+            right: -50,
+            width: 200,
+            height: 200,
+            borderRadius: '50%',
+            bgcolor: 'rgba(255,255,255,0.1)',
+            zIndex: 0
+          }} />
+        </Card>
+      )}
+      
+      {/* Quick Start Completion Badge */}
+      {quickStartCompleted && (
+        <Alert 
+          severity="success" 
+          icon={<CheckCircle />}
+          sx={{ mb: 3 }}
+          onClose={() => setQuickStartCompleted(false)}
+        >
+          <Typography variant="body2">
+            ✓ <strong>Quick Start Complete!</strong> You're all set. Upload your data to see personalized insights.
+          </Typography>
+        </Alert>
+      )}
+      
+      {/* Quick Start Active Progress */}
+      {quickStartActive && quickStartStep > 0 && (
+        <Alert 
+          severity="info" 
+          sx={{ mb: 3 }}
+          icon={<Info />}
+        >
+          {quickStartStep === 1 && (
+            <Typography variant="body2">
+              <strong>Step 1 of 3:</strong> Loading Coffee Shop sample data... ☕
+            </Typography>
+          )}
+          {quickStartStep === 2 && (
+            <Typography variant="body2">
+              <strong>Step 2 of 3:</strong> Here's what you'd see with YOUR data! Check out the predictions, trends, and recommendations below. 📊
+            </Typography>
+          )}
+          {quickStartStep === 3 && (
+            <Box>
+              <Typography variant="body2" sx={{ mb: 1 }}>
+                <strong>Step 3 of 3:</strong> Ready to see insights for your business?
+              </Typography>
+              <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
+                <Button 
+                  size="small" 
+                  variant="contained"
+                  onClick={() => { setActiveTab(1); completeQuickStart(); }}
+                >
+                  Upload My Data
+                </Button>
+                <Button 
+                  size="small" 
+                  variant="outlined"
+                  onClick={completeQuickStart}
+                >
+                  I'll Do This Later
+                </Button>
+              </Box>
+            </Box>
+          )}
+        </Alert>
+      )}
+      
       <Grid container spacing={3} sx={{ mb: 3 }}>
         <Grid item xs={12} sm={6} md={3}>
           <Card sx={{ height: '100%', cursor: 'pointer' }} onClick={() => setActiveTab(1)}>
@@ -1187,6 +1337,7 @@ const Dashboard: React.FC = () => {
   );
 
   const renderUpload = () => (
+    <>
     <Paper sx={{ p: 3 }}>
       <Typography variant="h2" component="h2" gutterBottom>
         Data Upload
@@ -1242,13 +1393,13 @@ const Dashboard: React.FC = () => {
         isUploading={isUploading || isAnalyzing}
       />
 
-      {/* Sample Data Section */}
+      {/* Sample Data & Templates Section */}
       <Box sx={{ mt: 3, mb: 2 }}>
         <Divider sx={{ mb: 2 }}>
-          <Chip label="OR TRY WITH SAMPLE DATA" />
+          <Chip label="SAMPLE DATA & TEMPLATES" />
         </Divider>
         <Typography variant="body2" color="text.secondary" sx={{ mb: 2, textAlign: 'center' }}>
-          Not ready to upload your data? Try the platform with pre-loaded business examples
+          Not ready to upload your data? Try a sample or download a starter template.
         </Typography>
         <Grid container spacing={2}>
           <Grid item xs={12} md={4}>
@@ -1259,6 +1410,8 @@ const Dashboard: React.FC = () => {
               onClick={() => handleLoadSampleData('retail')}
               disabled={isUploading || isAnalyzing}
               sx={{ height: '100%', py: 2, flexDirection: 'column', gap: 1 }}
+              onMouseEnter={(e) => { setTemplatePreview(formatSamplePreview('retail')); setPreviewAnchor(e.currentTarget); }}
+              onMouseLeave={() => { setTemplatePreview(null); setPreviewAnchor(null); }}
             >
               <Typography variant="subtitle2" sx={{ fontWeight: 600 }}>
                 Coffee Shop
@@ -1266,6 +1419,25 @@ const Dashboard: React.FC = () => {
               <Typography variant="caption" color="text.secondary">
                 15 days of retail sales data
               </Typography>
+              <Typography variant="caption" color="primary" sx={{ mt: 0.5 }}>
+                Hover: see sample rows
+              </Typography>
+            </Button>
+            <Button
+              fullWidth
+              variant="text"
+              size="small"
+              sx={{ mt: 1 }}
+              onClick={() => {
+                const csv = generateTemplateCSV('retail');
+                const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+                const link = document.createElement('a');
+                link.href = URL.createObjectURL(blob);
+                link.download = 'retail_sales_template.csv';
+                link.click();
+              }}
+            >
+              Download Retail Template
             </Button>
           </Grid>
           <Grid item xs={12} md={4}>
@@ -1276,6 +1448,8 @@ const Dashboard: React.FC = () => {
               onClick={() => handleLoadSampleData('ecommerce')}
               disabled={isUploading || isAnalyzing}
               sx={{ height: '100%', py: 2, flexDirection: 'column', gap: 1 }}
+              onMouseEnter={(e) => { setTemplatePreview(formatSamplePreview('ecommerce')); setPreviewAnchor(e.currentTarget); }}
+              onMouseLeave={() => { setTemplatePreview(null); setPreviewAnchor(null); }}
             >
               <Typography variant="subtitle2" sx={{ fontWeight: 600 }}>
                 Online Boutique
@@ -1283,6 +1457,25 @@ const Dashboard: React.FC = () => {
               <Typography variant="caption" color="text.secondary">
                 15 days of e-commerce data
               </Typography>
+              <Typography variant="caption" color="primary" sx={{ mt: 0.5 }}>
+                Hover: see sample rows
+              </Typography>
+            </Button>
+            <Button
+              fullWidth
+              variant="text"
+              size="small"
+              sx={{ mt: 1 }}
+              onClick={() => {
+                const csv = generateTemplateCSV('ecommerce');
+                const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+                const link = document.createElement('a');
+                link.href = URL.createObjectURL(blob);
+                link.download = 'ecommerce_template.csv';
+                link.click();
+              }}
+            >
+              Download E-commerce Template
             </Button>
           </Grid>
           <Grid item xs={12} md={4}>
@@ -1293,6 +1486,8 @@ const Dashboard: React.FC = () => {
               onClick={() => handleLoadSampleData('restaurant')}
               disabled={isUploading || isAnalyzing}
               sx={{ height: '100%', py: 2, flexDirection: 'column', gap: 1 }}
+              onMouseEnter={(e) => { setTemplatePreview(formatSamplePreview('service')); setPreviewAnchor(e.currentTarget); }}
+              onMouseLeave={() => { setTemplatePreview(null); setPreviewAnchor(null); }}
             >
               <Typography variant="subtitle2" sx={{ fontWeight: 600 }}>
                 Restaurant
@@ -1300,9 +1495,60 @@ const Dashboard: React.FC = () => {
               <Typography variant="caption" color="text.secondary">
                 15 days of operations data
               </Typography>
+              <Typography variant="caption" color="primary" sx={{ mt: 0.5 }}>
+                Hover: see sample rows
+              </Typography>
+            </Button>
+            <Button
+              fullWidth
+              variant="text"
+              size="small"
+              sx={{ mt: 1 }}
+              onClick={() => {
+                const csv = generateTemplateCSV('service');
+                const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+                const link = document.createElement('a');
+                link.href = URL.createObjectURL(blob);
+                link.download = 'service_business_template.csv';
+                link.click();
+              }}
+            >
+              Download Service Template
             </Button>
           </Grid>
         </Grid>
+        <Box sx={{ mt: 2, textAlign: 'center' }}>
+          <Button 
+            size="small" 
+            variant="contained" 
+            onClick={() => setDataReqOpen(true)}
+          >
+            View Data Requirements
+          </Button>
+        </Box>
+        {/* Hover Preview Popover (simple absolute box) */}
+        {templatePreview && previewAnchor && (
+          <Box
+            role="tooltip"
+            sx={{
+              position: 'absolute',
+              zIndex: 10,
+              mt: 1,
+              backgroundColor: 'background.paper',
+              border: '1px solid',
+              borderColor: 'divider',
+              boxShadow: 3,
+              p: 1.5,
+              borderRadius: 1,
+              fontSize: '0.75rem',
+              whiteSpace: 'pre',
+              maxWidth: 260
+            }}
+            style={{ left: previewAnchor.getBoundingClientRect().left, top: previewAnchor.getBoundingClientRect().bottom + window.scrollY }}
+          >
+            {templatePreview}
+          </Box>
+        )}
       </Box>
 
       {(isUploading || isAnalyzing) && (
@@ -1392,43 +1638,66 @@ const Dashboard: React.FC = () => {
         </Box>
       )}
     </Paper>
+    <DataRequirementsChecklistModal open={dataReqOpen} onClose={() => setDataReqOpen(false)} />
+    </>
   );
 
   const renderPredictions = () => (
-    <Paper sx={{ p: 3 }}>
+    <Paper sx={{ p: isMobile ? 2 : 3 }}>
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2, flexWrap: 'wrap', gap: 2 }}>
         <Box>
-          <Typography variant="h2" component="h2" gutterBottom>
+          <Typography variant={isMobile ? "h4" : "h2"} component="h2" gutterBottom>
             ML Predictions
           </Typography>
           <Typography variant="body1" color="text.secondary">
             AI-powered predictions from your uploaded data.
           </Typography>
         </Box>
-        <Box sx={{ display: 'flex', gap: 2, alignItems: 'center' }}>
+        <Box sx={{ display: 'flex', gap: 1, alignItems: 'center', flexWrap: 'wrap' }}>
           {uploadedFiles.length > 0 && analysisResults && (
-            <Button
-              variant="contained"
-              startIcon={<Download />}
-              onClick={handleDownloadClick}
-              sx={{
-                background: 'linear-gradient(45deg, #2196F3 30%, #21CBF3 90%)',
-                boxShadow: '0 3px 5px 2px rgba(33, 203, 243, .3)',
-              }}
-            >
-              Download Report
-            </Button>
+            <>
+              {!isMobile && (
+                <Button
+                  variant="contained"
+                  startIcon={<Download />}
+                  onClick={handleDownloadClick}
+                  sx={{
+                    background: 'linear-gradient(45deg, #2196F3 30%, #21CBF3 90%)',
+                    boxShadow: '0 3px 5px 2px rgba(33, 203, 243, .3)',
+                  }}
+                >
+                  Download Report
+                </Button>
+              )}
+              {isMobile && (
+                <Button
+                  variant="contained"
+                  startIcon={<Share />}
+                  onClick={() => setShareDialogOpen(true)}
+                  size="small"
+                  sx={{
+                    minWidth: '44px',
+                    minHeight: '44px',
+                    background: 'linear-gradient(45deg, #9c27b0 30%, #ba68c8 90%)',
+                  }}
+                >
+                  📱 Share
+                </Button>
+              )}
+            </>
           )}
-          <FormControlLabel
-            control={
-              <Switch 
-                checked={usePlainLanguage}
-                onChange={(e) => setUsePlainLanguage(e.target.checked)}
-                color="primary"
-              />
-            }
-            label={usePlainLanguage ? "Plain Language" : "Technical View"}
-          />
+          {!isMobile && (
+            <FormControlLabel
+              control={
+                <Switch 
+                  checked={usePlainLanguage}
+                  onChange={(e) => setUsePlainLanguage(e.target.checked)}
+                  color="primary"
+                />
+              }
+              label={usePlainLanguage ? "Plain Language" : "Technical View"}
+            />
+          )}
         </Box>
       </Box>
 
@@ -1612,16 +1881,30 @@ const Dashboard: React.FC = () => {
 
             {/* ML Insights */}
             <Grid item xs={12}>
-              <Typography variant="h6" gutterBottom>
-                🤖 AI Insights
-              </Typography>
+              <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+                <Typography variant="h6" gutterBottom>
+                  🤖 AI Insights
+                </Typography>
+                {isMobile && analysisResults.insights.length > 3 && (
+                  <Button
+                    size="small"
+                    onClick={() => setShowAllPredictions(!showAllPredictions)}
+                    endIcon={showAllPredictions ? <ArrowUpwardOutlined /> : <ArrowDownwardOutlined />}
+                    sx={{ minHeight: '44px' }}
+                  >
+                    {showAllPredictions ? 'Show Less' : `View All (${analysisResults.insights.length})`}
+                  </Button>
+                )}
+              </Box>
               <Grid container spacing={2}>
-                {analysisResults.insights.map((insight, index) => {
+                {analysisResults.insights
+                  .slice(0, isMobile && !showAllPredictions ? 3 : analysisResults.insights.length)
+                  .map((insight, index) => {
                   const insightExplanation = explainInsight(insight);
                   return (
                     <Grid item xs={12} md={4} key={index}>
                       <Card variant="outlined">
-                        <CardContent sx={{ p: 2 }}>
+                        <CardContent sx={{ p: isMobile ? 1.5 : 2 }}>
                           <Typography variant="subtitle2" gutterBottom>
                             {insight.title}
                           </Typography>
@@ -1761,6 +2044,39 @@ const Dashboard: React.FC = () => {
                     </Typography>
                   </Alert>
                 )}
+                {/* ROI Calculator Section */}
+                {analysisResults && analysisResults.predictions && analysisResults.predictions.length > 1 && (
+                  <ROICalculator 
+                    baselineRevenue={/* Derive a simple baseline from first prediction or average of uploaded revenue column if available */
+                      (() => {
+                        // Attempt to infer baseline from summary stats (first numeric metric labeled Revenue)
+                        try {
+                          const stats = (analysisResults as any).summary_stats;
+                          if (stats && stats.Revenue && typeof stats.Revenue.mean === 'number') {
+                            // Assume time window ~ one period; treat mean * count/periods? Simplicity: use mean * (stats.Revenue.count / stats.Revenue.count) => mean.
+                            return stats.Revenue.mean;
+                          }
+                          // fallback to average of predictions
+                          const preds = analysisResults.predictions;
+                          return preds.reduce((a: number, b: number) => a + b, 0) / preds.length;
+                        } catch {
+                          return 0;
+                        }
+                      })()
+                    }
+                    growthPercent={(() => {
+                      const preds = analysisResults.predictions;
+                      const first = preds[0];
+                      const last = preds[preds.length - 1];
+                      if (first > 0) {
+                        return ((last - first) / first) * 100;
+                      }
+                      return 0;
+                    })()}
+                    defaultGrossMargin={40}
+                    defaultInvestmentRatio={30}
+                  />
+                )}
               </Box>
             </Grid>
           </Grid>
@@ -1780,35 +2096,76 @@ Your predictions will include trends, forecasts, and actionable business insight
           onAction={() => setActiveTab(1)}
         />
       )}
+      {/* Share to Mobile Dialog */}
+      {analysisResults && (
+        <ShareToMobileButton
+          open={shareDialogOpen}
+          onClose={() => setShareDialogOpen(false)}
+          summary={generatePredictionsSummary(analysisResults)}
+        />
+      )}
     </Paper>
   );
 
   const renderAnalytics = () => (
-    <Paper sx={{ p: 3 }}>
-      <Typography variant="h2" component="h2" gutterBottom>
-        Analytics Dashboard
-      </Typography>
-      <Typography variant="body1" paragraph>
-        Comprehensive analytics and insights from your data analysis.
-      </Typography>
+    <Paper sx={{ p: isMobile ? 2 : 3 }}>
+      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2, flexWrap: 'wrap' }}>
+        <Box>
+          <Typography variant={isMobile ? "h4" : "h2"} component="h2" gutterBottom>
+            Analytics Dashboard
+          </Typography>
+          <Typography variant="body1" paragraph>
+            Comprehensive analytics and insights from your data analysis.
+          </Typography>
+        </Box>
+        {isMobile && uploadedFiles.length > 0 && analysisResults && (
+          <Button
+            variant="contained"
+            startIcon={<Share />}
+            onClick={() => setShareDialogOpen(true)}
+            size="small"
+            sx={{
+              minWidth: '44px',
+              minHeight: '44px',
+              background: 'linear-gradient(45deg, #9c27b0 30%, #ba68c8 90%)',
+            }}
+          >
+            📱 Share
+          </Button>
+        )}
+      </Box>
       
       {uploadedFiles.length > 0 && analysisResults ? (
-        <Grid container spacing={3}>
+        <Grid container spacing={isMobile ? 2 : 3}>
           {/* Summary Statistics */}
           {Object.keys(analysisResults.summary_stats).length > 0 && (
             <Grid item xs={12}>
-              <Typography variant="h6" gutterBottom>
-                📊 Summary Statistics
-              </Typography>
+              <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+                <Typography variant="h6" gutterBottom>
+                  📊 Summary Statistics
+                </Typography>
+                {isMobile && Object.keys(analysisResults.summary_stats).length > 2 && (
+                  <Button
+                    size="small"
+                    onClick={() => setShowAllAnalytics(!showAllAnalytics)}
+                    endIcon={showAllAnalytics ? <ArrowUpwardOutlined /> : <ArrowDownwardOutlined />}
+                    sx={{ minHeight: '44px' }}
+                  >
+                    {showAllAnalytics ? 'Show Less' : `View All (${Object.keys(analysisResults.summary_stats).length})`}
+                  </Button>
+                )}
+              </Box>
               <Grid container spacing={2}>
-                {Object.entries(analysisResults.summary_stats).slice(0, 4).map(([column, stats]: [string, any]) => (
+                {Object.entries(analysisResults.summary_stats)
+                  .slice(0, isMobile && !showAllAnalytics ? 2 : Object.keys(analysisResults.summary_stats).length)
+                  .map(([column, stats]: [string, any]) => (
                   <Grid item xs={12} sm={6} md={3} key={column}>
                     <Card>
-                      <CardContent sx={{ p: 2 }}>
-                        <Typography variant="h6" fontSize="1rem" gutterBottom>
+                      <CardContent sx={{ p: isMobile ? 1.5 : 2 }}>
+                        <Typography variant="h6" fontSize={isMobile ? "0.9rem" : "1rem"} gutterBottom>
                           {column}
                         </Typography>
-                        <Box sx={{ fontSize: '0.8rem' }}>
+                        <Box sx={{ fontSize: isMobile ? '0.75rem' : '0.8rem' }}>
                           <Typography variant="body2">Count: {stats.count}</Typography>
                           <Typography variant="body2">Mean: {stats.mean?.toFixed(2)}</Typography>
                           <Typography variant="body2">Min: {stats.min?.toFixed(2)}</Typography>
@@ -1824,28 +2181,28 @@ Your predictions will include trends, forecasts, and actionable business insight
 
           {/* Charts Data Visualization */}
           {analysisResults.charts_data.timeseries && (
-            <Grid item xs={12} md={8}>
-              <Paper sx={{ p: 2, minHeight: 300 }}>
-                <Typography variant="h6" gutterBottom>
+            <Grid item xs={12} md={isMobile ? 12 : 8}>
+              <Paper sx={{ p: isMobile ? 1.5 : 2, minHeight: isMobile ? 200 : 300 }}>
+                <Typography variant="h6" gutterBottom fontSize={isMobile ? "0.9rem" : "1.25rem"}>
                   📈 {analysisResults.charts_data.timeseries.y_label} Over Time
                 </Typography>
                 <Box sx={{ 
-                  height: 200, 
+                  height: isMobile ? 150 : 200, 
                   display: 'flex', 
                   alignItems: 'center', 
                   justifyContent: 'center',
                   bgcolor: 'grey.50',
                   borderRadius: 1
                 }}>
-                  <Box sx={{ textAlign: 'center' }}>
-                    <Typography variant="body1" gutterBottom>
+                  <Box sx={{ textAlign: 'center', px: 1 }}>
+                    <Typography variant="body1" gutterBottom fontSize={isMobile ? "0.85rem" : "1rem"}>
                       Time Series Visualization
                     </Typography>
-                    <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+                    <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }} fontSize={isMobile ? "0.75rem" : "0.875rem"}>
                       {analysisResults.charts_data.timeseries.data.length} data points
                     </Typography>
                     <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap', justifyContent: 'center' }}>
-                      {analysisResults.charts_data.timeseries.data.slice(0, 7).map((point: any, index: number) => (
+                      {analysisResults.charts_data.timeseries.data.slice(0, isMobile ? 5 : 7).map((point: any, index: number) => (
                         <Chip
                           key={index}
                           label={`${point.value.toFixed(0)}`}
@@ -1854,7 +2211,7 @@ Your predictions will include trends, forecasts, and actionable business insight
                           variant="outlined"
                         />
                       ))}
-                      {analysisResults.charts_data.timeseries.data.length > 7 && (
+                      {analysisResults.charts_data.timeseries.data.length > (isMobile ? 5 : 7) && (
                         <Chip label="..." size="small" variant="outlined" />
                       )}
                     </Box>
@@ -1866,17 +2223,17 @@ Your predictions will include trends, forecasts, and actionable business insight
 
           {/* Distribution Chart */}
           {analysisResults.charts_data.distribution && (
-            <Grid item xs={12} md={4}>
-              <Paper sx={{ p: 2, minHeight: 300 }}>
-                <Typography variant="h6" gutterBottom>
+            <Grid item xs={12} md={isMobile ? 12 : 4}>
+              <Paper sx={{ p: isMobile ? 1.5 : 2, minHeight: isMobile ? 200 : 300 }}>
+                <Typography variant="h6" gutterBottom fontSize={isMobile ? "0.9rem" : "1.25rem"}>
                   📊 Distribution: {analysisResults.charts_data.distribution.column}
                 </Typography>
                 <Box sx={{ mt: 2 }}>
-                  {analysisResults.charts_data.distribution.data.slice(0, 5).map((bin: any, index: number) => (
+                  {analysisResults.charts_data.distribution.data.slice(0, isMobile ? 3 : 5).map((bin: any, index: number) => (
                     <Box key={index} sx={{ mb: 1 }}>
                       <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 0.5 }}>
-                        <Typography variant="caption">{bin.bin}</Typography>
-                        <Typography variant="caption">{bin.count}</Typography>
+                        <Typography variant="caption" fontSize={isMobile ? "0.7rem" : "0.75rem"}>{bin.bin}</Typography>
+                        <Typography variant="caption" fontSize={isMobile ? "0.7rem" : "0.75rem"}>{bin.count}</Typography>
                       </Box>
                       <LinearProgress 
                         variant="determinate" 
@@ -1932,6 +2289,14 @@ What you'll get once you upload:
 Upload CSV or Excel files with your business data to get started.`}
           actionLabel="Upload Data Now"
           onAction={() => setActiveTab(1)}
+        />
+      )}
+      {/* Share to Mobile Dialog for Analytics */}
+      {analysisResults && (
+        <ShareToMobileButton
+          open={shareDialogOpen}
+          onClose={() => setShareDialogOpen(false)}
+          summary={generateAnalyticsSummary(analysisResults)}
         />
       )}
     </Paper>
@@ -2582,46 +2947,58 @@ Upload CSV or Excel files with your business data to get started.`}
   };
 
   return (
-    <Container maxWidth="lg" sx={{ py: 2 }}>
-      <AppBar position="static" color="transparent" elevation={1} sx={{ mb: 3, borderRadius: 1 }}>
-        <Toolbar>
-          <Typography variant="h5" component="h1" sx={{ flexGrow: 1 }}>
-            SME Analytics Platform
+    <Container maxWidth="lg" sx={{ py: isMobile ? 1 : 2 }}>
+      <AppBar position="static" color="transparent" elevation={1} sx={{ mb: isMobile ? 2 : 3, borderRadius: 1 }}>
+        <Toolbar sx={{ minHeight: isMobile ? '56px' : '64px' }}>
+          <Typography variant={isMobile ? "h6" : "h5"} component="h1" sx={{ flexGrow: 1 }}>
+            {isMobile ? 'SME Analytics' : 'SME Analytics Platform'}
           </Typography>
-          <Chip label="All Systems Operational" color="success" variant="outlined" />
+          {!isMobile && <Chip label="All Systems Operational" color="success" variant="outlined" />}
         </Toolbar>
         <Tabs 
           value={activeTab} 
           onChange={handleTabChange}
-          sx={{ borderTop: 1, borderColor: 'divider' }}
+          sx={{ 
+            borderTop: 1, 
+            borderColor: 'divider',
+            '& .MuiTab-root': {
+              minHeight: isMobile ? '48px' : '48px',
+              minWidth: isMobile ? '60px' : '90px',
+              fontSize: isMobile ? '0.75rem' : '0.875rem',
+              px: isMobile ? 0.5 : 2,
+            }
+          }}
           aria-label="Analytics platform navigation tabs"
+          variant={isMobile ? "scrollable" : "standard"}
+          scrollButtons={isMobile ? "auto" : false}
+          allowScrollButtonsMobile
         >
           <Tab 
-            label="🏠 Overview" 
+            label={isMobile ? "🏠" : "🏠 Overview"} 
             id="tab-overview"
             aria-controls="panel-overview"
             aria-label="Overview dashboard tab"
           />
           <Tab 
-            label="📁 Upload Data" 
+            label={isMobile ? "📁" : "📁 Upload Data"} 
             id="tab-upload"
             aria-controls="panel-upload"
             aria-label="Upload data files tab"
           />
           <Tab 
-            label="🤖 Predictions" 
+            label={isMobile ? "🤖" : "🤖 Predictions"} 
             id="tab-predictions"
             aria-controls="panel-predictions"
             aria-label="View ML predictions tab"
           />
           <Tab 
-            label="📊 Analytics" 
+            label={isMobile ? "📊" : "📊 Analytics"} 
             id="tab-analytics"
             aria-controls="panel-analytics"
             aria-label="View analytics dashboard tab"
           />
           <Tab 
-            label="⚖️ Compare" 
+            label={isMobile ? "⚖️" : "⚖️ Compare"} 
             id="tab-compare"
             aria-controls="panel-compare"
             aria-label="Compare time periods tab"
