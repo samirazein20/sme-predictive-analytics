@@ -3,6 +3,8 @@ package com.sme.analytics.model;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
+import org.hibernate.annotations.Type;
+import io.hypersistence.utils.hibernate.type.json.JsonBinaryType;
 import java.time.LocalDateTime;
 
 /**
@@ -29,6 +31,7 @@ public class Message {
     @Column(nullable = false, columnDefinition = "TEXT")
     private String content;
 
+    @Type(JsonBinaryType.class)
     @Column(columnDefinition = "jsonb")
     private String metadata; // JSON string for additional context
 

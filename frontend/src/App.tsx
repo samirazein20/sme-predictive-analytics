@@ -115,6 +115,7 @@ import { ROICalculator } from './components/ROICalculator';
 import { ShareToMobileButton } from './components/ShareToMobileButton';
 import { generatePredictionsSummary, generateAnalyticsSummary } from './utils/mobileSummary';
 import ChatPage from './pages/ChatPage';
+import chatService from './services/chatService';
 
 // Register Chart.js components
 ChartJS.register(
@@ -278,6 +279,11 @@ const Dashboard: React.FC = () => {
     active: true,
   });
 
+  // Chat state
+  const [conversations, setConversations] = useState<any[]>([]);
+  const [isLoadingConversations, setIsLoadingConversations] = useState(false);
+  const conversationsLoadedRef = useRef(false);
+
   // Check if user is first-time visitor
   useEffect(() => {
     const hasSeenOnboarding = localStorage.getItem('hasSeenOnboarding');
@@ -369,6 +375,14 @@ const Dashboard: React.FC = () => {
 
     restoreSession();
   }, []);
+
+  // Load conversations when chat tab is accessed
+  useEffect(() => {
+    if (activeTab === 5 && !conversationsLoadedRef.current && !isLoadingConversations) {
+      conversationsLoadedRef.current = true;
+      loadConversations();
+    }
+  }, [activeTab]);
 
   const handleTabChange = (event: React.SyntheticEvent, newValue: number) => {
     setActiveTab(newValue);
@@ -2857,7 +2871,7 @@ Upload CSV or Excel files with your business data to get started.`}
                     <DatePicker
                       label={`${period.label} Date`}
                       value={period.date}
-                      onChange={(newValue) => updatePeriodDate(index, newValue)}
+                      onChange={(newValue: Dayjs | null) => updatePeriodDate(index, newValue)}
                       sx={{ width: '100%', mb: 2 }}
                       slotProps={{
                         textField: { size: 'small' }
@@ -3356,6 +3370,215 @@ Upload CSV or Excel files with your business data to get started.`}
     </LocalizationProvider>
   );
 
+  // Load conversations when chat tab is accessed
+  const loadConversations = async () => {
+    setIsLoadingConversations(true);
+    try {
+      // Using userId = 1 for demo purposes
+      const userId = 1;
+      const convos = await chatService.getUserConversations(userId);
+      setConversations(convos);
+    } catch (error) {
+      console.error('Error loading conversations:', error);
+      setSnackbar({
+        open: true,
+        message: 'Failed to load conversations',
+        severity: 'error'
+      });
+    } finally {
+      setIsLoadingConversations(false);
+    }
+  };
+
+  // Start a new chat from an uploaded file
+  const handleStartChat = async (fileId: number, fileName: string) => {
+    console.log('=== handleStartChat called ===');
+    console.log('fileId:', fileId, 'fileName:', fileName);
+    try {
+      const userId = 1; // Demo user ID
+      console.log('Creating conversation for userId:', userId);
+      const conversation = await chatService.createConversation({
+        userId,
+        uploadedFileId: fileId,
+        title: `Chat about ${fileName}`
+      });
+      
+      console.log('Conversation created successfully:', conversation);
+      // Navigate to the chat page
+      navigate(`/chat/${conversation.id}`);
+    } catch (error) {
+      console.error('Error creating conversation:', error);
+      const errorMessage = error instanceof Error ? error.message : 'Failed to start chat';
+      setSnackbar({
+        open: true,
+        message: errorMessage,
+        severity: 'error'
+      });
+    }
+  };
+
+  // Render chat conversations list
+  const renderChat = () => {
+    console.log('=== renderChat called ===');
+    console.log('uploadedFiles:', uploadedFiles);
+    console.log('uploadedFiles.length:', uploadedFiles.length);
+    return (
+      <Paper sx={{ p: 3 }}>
+        <Box sx={{ mb: 4 }}>
+          <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
+            <Chat sx={{ fontSize: 40, color: 'primary.main', mr: 2 }} />
+            <Box>
+              <Typography variant="h5" gutterBottom>
+                Chat with Your Data
+              </Typography>
+              <Typography variant="body2" color="text.secondary">
+                Ask questions about your uploaded files and get AI-powered insights
+              </Typography>
+            </Box>
+          </Box>
+
+          <Alert severity="info" sx={{ mb: 3 }}>
+            <Typography variant="body2">
+              💬 <strong>How it works:</strong> Upload a file in the "Upload Data" tab, then start a conversation to ask questions about your data. The AI will analyze your data and provide insights based on your questions.
+            </Typography>
+          </Alert>
+        </Box>
+
+        {/* Quick Start from Uploaded Files */}
+        {uploadedFiles.length > 0 && (
+          <Box sx={{ mb: 4 }}>
+            <Typography variant="h6" gutterBottom>
+              Start New Chat
+            </Typography>
+            <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+              Select a file to start a conversation:
+            </Typography>
+            <Grid container spacing={2}>
+              {uploadedFiles.map((file) => (
+                <Grid item xs={12} md={6} key={file.sessionId}>
+                  <Card>
+                    <CardContent>
+                      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start' }}>
+                        <Box>
+                          <Typography variant="subtitle1" sx={{ fontWeight: 600 }}>
+                            {file.fileName}
+                          </Typography>
+                          <Typography variant="caption" color="text.secondary">
+                            {file.rowCount} rows, {file.columnCount} columns
+                          </Typography>
+                          <Box sx={{ mt: 1 }}>
+                            <Chip 
+                              label={file.analysisType} 
+                              size="small" 
+                              color="primary" 
+                              variant="outlined"
+                            />
+                          </Box>
+                        </Box>
+                        <Button
+                          variant="contained"
+                          size="small"
+                          startIcon={<Chat />}
+                          onClick={() => {
+                            console.log('=== Start Chat button clicked ===');
+                            console.log('file:', file);
+                            console.log('file.uploadedFileId:', file.uploadedFileId);
+                            if (file.uploadedFileId) {
+                              handleStartChat(file.uploadedFileId, file.fileName);
+                            } else {
+                              console.log('uploadedFileId is missing!');
+                              setSnackbar({
+                                open: true,
+                                message: 'File ID not available. Please re-upload the file.',
+                                severity: 'error'
+                              });
+                            }
+                          }}
+                          disabled={!file.uploadedFileId}
+                        >
+                          Start Chat
+                        </Button>
+                      </Box>
+                    </CardContent>
+                  </Card>
+                </Grid>
+              ))}
+            </Grid>
+          </Box>
+        )}
+
+        {/* Existing Conversations */}
+        <Box>
+          <Typography variant="h6" gutterBottom>
+            Recent Conversations
+          </Typography>
+          
+          {isLoadingConversations ? (
+            <Box sx={{ display: 'flex', justifyContent: 'center', py: 4 }}>
+              <CircularProgress />
+            </Box>
+          ) : conversations.length === 0 ? (
+            <EmptyState
+              icon={<Chat sx={{ fontSize: 64 }} />}
+              title="No conversations yet"
+              description={
+                uploadedFiles.length > 0
+                  ? "Start a new chat by selecting a file above"
+                  : "Upload some data first, then start a conversation to ask questions about your data"
+              }
+              actionLabel={uploadedFiles.length === 0 ? "Upload Data" : undefined}
+              onAction={uploadedFiles.length === 0 ? () => setActiveTab(1) : undefined}
+            />
+          ) : (
+            <Grid container spacing={2}>
+              {conversations.map((conversation) => (
+                <Grid item xs={12} md={6} key={conversation.id}>
+                  <Card 
+                    sx={{ 
+                      cursor: 'pointer',
+                      '&:hover': { 
+                        boxShadow: 3,
+                        borderColor: 'primary.main' 
+                      },
+                      border: '1px solid',
+                      borderColor: 'divider'
+                    }}
+                    onClick={() => navigate(`/chat/${conversation.id}`)}
+                  >
+                    <CardContent>
+                      <Box sx={{ display: 'flex', alignItems: 'start', mb: 1 }}>
+                        <Chat color="primary" sx={{ mr: 1, mt: 0.5 }} />
+                        <Box sx={{ flex: 1 }}>
+                          <Typography variant="subtitle1" sx={{ fontWeight: 600 }}>
+                            {conversation.title}
+                          </Typography>
+                          <Typography variant="caption" color="text.secondary">
+                            {conversation.fileName}
+                          </Typography>
+                        </Box>
+                      </Box>
+                      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mt: 2 }}>
+                        <Typography variant="caption" color="text.secondary">
+                          {conversation.messageCount || 0} messages
+                        </Typography>
+                        <Typography variant="caption" color="text.secondary">
+                          {conversation.lastMessageAt 
+                            ? new Date(conversation.lastMessageAt).toLocaleDateString()
+                            : new Date(conversation.createdAt).toLocaleDateString()
+                          }
+                        </Typography>
+                      </Box>
+                    </CardContent>
+                  </Card>
+                </Grid>
+              ))}
+            </Grid>
+          )}
+        </Box>
+      </Paper>
+    );
+  };
+
   // Onboarding tour steps configuration
   const onboardingSteps = [
     {
@@ -3476,6 +3699,12 @@ Upload CSV or Excel files with your business data to get started.`}
             aria-controls="panel-compare"
             aria-label="Compare time periods tab"
           />
+          <Tab 
+            label={isMobile ? "💬" : "💬 Chat"} 
+            id="tab-chat"
+            aria-controls="panel-chat"
+            aria-label="Chat with your data tab"
+          />
         </Tabs>
       </AppBar>
 
@@ -3493,6 +3722,9 @@ Upload CSV or Excel files with your business data to get started.`}
       </TabPanel>
       <TabPanel value={activeTab} index={4}>
         {renderComparison()}
+      </TabPanel>
+      <TabPanel value={activeTab} index={5}>
+        {renderChat()}
       </TabPanel>
 
       {/* Onboarding Modal */}

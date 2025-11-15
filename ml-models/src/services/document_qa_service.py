@@ -9,6 +9,11 @@ from typing import Dict, List, Any, Optional
 import json
 import requests
 import os
+import logging
+
+# Configure logging
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 
 class DocumentQAService:
@@ -17,6 +22,31 @@ class DocumentQAService:
     def __init__(self):
         self.ollama_url = os.getenv("OLLAMA_BASE_URL", "http://ollama:11434")
         self.model_name = "llama3.1:8b"
+        self.model_loaded = False
+        self._preload_model()
+    
+    def _preload_model(self):
+        """Preload the model to keep it in memory"""
+        logger.info(f"Starting model preload for {self.model_name}...")
+        try:
+            # Send a simple request to load the model
+            response = requests.post(
+                f"{self.ollama_url}/api/generate",
+                json={
+                    "model": self.model_name,
+                    "prompt": "Hello",
+                    "stream": False,
+                    "options": {
+                        "num_predict": 1  # Only generate 1 token to quickly load the model
+                    }
+                },
+                timeout=120
+            )
+            self.model_loaded = True
+            logger.info(f"✅ Successfully preloaded {self.model_name} model")
+        except Exception as e:
+            logger.warning(f"⚠️  Could not preload model: {str(e)}")
+            self.model_loaded = False
 
     def analyze_document_context(self, csv_data: str, file_metadata: Dict[str, Any]) -> Dict[str, Any]:
         """
@@ -230,10 +260,10 @@ class DocumentQAService:
                     "options": {
                         "temperature": 0.7,
                         "top_p": 0.9,
-                        "max_tokens": 500
+                        "num_predict": 150  # Limit tokens to speed up responses
                     }
                 },
-                timeout=30
+                timeout=120  # Increased timeout to allow model loading
             )
 
             if response.status_code == 200:

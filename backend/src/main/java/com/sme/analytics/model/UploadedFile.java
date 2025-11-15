@@ -55,12 +55,15 @@ public class UploadedFile {
     @Column(name = "column_count")
     private Integer columnCount;
 
+    @Type(JsonBinaryType.class)
     @Column(name = "insights", columnDefinition = "jsonb")
     private String insights; // JSON string for insights
 
+    @Type(JsonBinaryType.class)
     @Column(name = "statistics", columnDefinition = "jsonb")
     private String statistics; // JSON string for statistics
 
+    @Type(JsonBinaryType.class)
     @Column(name = "predictions", columnDefinition = "jsonb")
     private String predictions; // JSON string for predictions
 
