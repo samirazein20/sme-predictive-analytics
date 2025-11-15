@@ -6,7 +6,7 @@
       "value": "sme-prod"
     },
     "location": {
-      "value": "eastus"
+      "value": "eastus2"
     },
     "postgresAdminPassword": {
       "value": "SMEAnalytics2024!@#$%"
