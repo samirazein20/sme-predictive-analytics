@@ -219,13 +219,6 @@ const Dashboard: React.FC = () => {
   // Sample template preview hover state
   const [templatePreview, setTemplatePreview] = useState<string | null>(null);
   const [previewAnchor, setPreviewAnchor] = useState<HTMLElement | null>(null);
-  
-  // Quick Start flow state
-  const [quickStartActive, setQuickStartActive] = useState(false);
-  const [quickStartStep, setQuickStartStep] = useState(0);
-  const [quickStartCompleted, setQuickStartCompleted] = useState(() => {
-    return localStorage.getItem('quickStartCompleted') === 'true';
-  });
 
   // Comparison Mode state - Multi-period support
   interface Period {
@@ -1028,32 +1021,7 @@ const Dashboard: React.FC = () => {
     }
   }, [activeTab]);
 
-  // Quick Start guided flow handler
-  const startQuickStart = async () => {
-    setQuickStartActive(true);
-    setQuickStartStep(1);
-    
-    // Step 1: Auto-load Coffee Shop sample data
-    await handleLoadSampleData('retail');
-    
-    // Step 2: Navigate to Predictions after a brief delay
-    setTimeout(() => {
-      setQuickStartStep(2);
-      setActiveTab(2); // Switch to Predictions tab
-    }, 2000);
-    
-    // Step 3: After showing predictions, prompt for upload
-    setTimeout(() => {
-      setQuickStartStep(3);
-    }, 5000);
-  };
 
-  const completeQuickStart = () => {
-    setQuickStartCompleted(true);
-    setQuickStartActive(false);
-    setQuickStartStep(0);
-    localStorage.setItem('quickStartCompleted', 'true');
-  };
 
   // Generate actionable recommendations based on analysis results
   const generateRecommendations = (results: AnalysisResult) => {
@@ -1159,61 +1127,6 @@ const Dashboard: React.FC = () => {
 
   const renderOverview = () => (
     <>
-      {/* Quick Start Active Progress */}
-      {quickStartActive && quickStartStep > 0 && (
-        <Alert
-          severity="info"
-          sx={{ mb: 3 }}
-          icon={<Info />}
-        >
-          {quickStartStep === 1 && (
-            <Typography variant="body2">
-              <strong>Step 1 of 3:</strong> Loading Coffee Shop sample data...
-            </Typography>
-          )}
-          {quickStartStep === 2 && (
-            <Typography variant="body2">
-              <strong>Step 2 of 3:</strong> Here's what you'll see with YOUR data! Check out the predictions, trends, and recommendations below.
-            </Typography>
-          )}
-          {quickStartStep === 3 && (
-            <Box>
-              <Typography variant="body2" sx={{ mb: 1 }}>
-                <strong>Step 3 of 3:</strong> Ready to see insights for your business?
-              </Typography>
-              <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
-                <Button
-                  size="small"
-                  variant="contained"
-                  onClick={() => { setActiveTab(1); completeQuickStart(); }}
-                >
-                  Upload My Data
-                </Button>
-                <Button
-                  size="small"
-                  variant="outlined"
-                  onClick={completeQuickStart}
-                >
-                  I'll Do This Later
-                </Button>
-              </Box>
-            </Box>
-          )}
-        </Alert>
-      )}
-
-      {/* Quick Start Completion Badge */}
-      {quickStartCompleted && (
-        <Alert
-          severity="success"
-          icon={<CheckCircle />}
-          sx={{ mb: 3 }}
-        >
-          <Typography variant="body2">
-            <strong>Great!</strong> You've seen what this platform can do. Upload your data to get personalized insights for your business.
-          </Typography>
-        </Alert>
-      )}
 
       {/* AI Assistant CTA Banner */}
       <Card
