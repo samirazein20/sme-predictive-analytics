@@ -239,7 +239,7 @@ jobs:
         run: |
           BACKEND_URL=$(az deployment group show \
             --resource-group ${{ env.AZURE_RESOURCE_GROUP }} \
-            --name main-containerapp \
+            --name main \
             --query properties.outputs.backenD_URL.value -o tsv)
           echo "url=$BACKEND_URL" >> $GITHUB_OUTPUT
           echo "Backend URL: $BACKEND_URL"
