@@ -222,6 +222,7 @@ public class ChatService {
 
     /**
      * Build document context from uploaded file
+     * Includes CSV data, columns, sample rows, and statistics for AI analysis
      */
     private Map<String, Object> buildDocumentContext(UploadedFile uploadedFile) {
         Map<String, Object> context = new HashMap<>();
@@ -230,6 +231,61 @@ public class ChatService {
         context.put("row_count", uploadedFile.getRowCount());
         context.put("column_count", uploadedFile.getColumnCount());
         context.put("analysis_type", uploadedFile.getAnalysisType());
+
+        // Parse CSV content to extract columns and sample data
+        try {
+            String csvContent = uploadedFile.getFileContent();
+            if (csvContent != null && !csvContent.isEmpty()) {
+                String[] lines = csvContent.split("\n");
+                
+                if (lines.length > 0) {
+                    // Extract column names from header row
+                    String[] columns = lines[0].split(",");
+                    List<String> columnNames = new ArrayList<>();
+                    for (String col : columns) {
+                        columnNames.add(col.trim().replace("\"", ""));
+                    }
+                    context.put("columns", columnNames);
+                    
+                    // Extract sample data (first 5 rows after header)
+                    List<Map<String, String>> sampleData = new ArrayList<>();
+                    int sampleSize = Math.min(6, lines.length); // Header + 5 data rows
+                    
+                    for (int i = 1; i < sampleSize; i++) {
+                        String[] values = lines[i].split(",");
+                        Map<String, String> row = new HashMap<>();
+                        
+                        for (int j = 0; j < Math.min(columns.length, values.length); j++) {
+                            String value = values[j].trim().replace("\"", "");
+                            row.put(columnNames.get(j), value);
+                        }
+                        sampleData.add(row);
+                    }
+                    context.put("sample_data", sampleData);
+                    
+                    // Generate a summary description
+                    StringBuilder summary = new StringBuilder();
+                    summary.append("This dataset contains ")
+                           .append(uploadedFile.getRowCount())
+                           .append(" rows and ")
+                           .append(columnNames.size())
+                           .append(" columns. ");
+                    summary.append("Columns: ")
+                           .append(String.join(", ", columnNames))
+                           .append(". ");
+                    summary.append("Analysis type: ")
+                           .append(uploadedFile.getAnalysisType() != null ? 
+                                   uploadedFile.getAnalysisType() : "General")
+                           .append(".");
+                    context.put("summary", summary.toString());
+                }
+            }
+        } catch (Exception e) {
+            logger.error("Error parsing CSV content for context", e);
+            // Add fallback summary if CSV parsing fails
+            context.put("summary", "Dataset with " + uploadedFile.getRowCount() + 
+                       " rows and " + uploadedFile.getColumnCount() + " columns.");
+        }
 
         // Parse JSON fields if available
         try {
