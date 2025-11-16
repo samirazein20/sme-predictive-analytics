@@ -99,72 +99,111 @@ class ChatService {
    * Get all conversations for a user
    */
   async getUserConversations(userId: number): Promise<ConversationDTO[]> {
-    const response = await fetch(`${this.baseUrl}/conversations/user/${userId}`, {
-      method: 'GET',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-    });
+    try {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
 
-    if (!response.ok) {
-      throw new Error('Failed to fetch conversations');
+      const response = await fetch(`${this.baseUrl}/conversations/user/${userId}`, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        signal: controller.signal,
+      });
+
+      clearTimeout(timeoutId);
+
+      if (!response.ok) {
+        throw new Error(`Failed to fetch conversations: ${response.status} ${response.statusText}`);
+      }
+
+      const data: ConversationsListResponse = await response.json();
+      if (!data.success) {
+        throw new Error('Failed to fetch conversations');
+      }
+
+      return data.conversations;
+    } catch (error: any) {
+      if (error.name === 'AbortError') {
+        throw new Error('Request timed out. The backend may not be responding.');
+      }
+      throw error;
     }
-
-    const data: ConversationsListResponse = await response.json();
-    if (!data.success) {
-      throw new Error('Failed to fetch conversations');
-    }
-
-    return data.conversations;
   }
 
   /**
    * Get a specific conversation
    */
   async getConversation(conversationId: number): Promise<ConversationDTO> {
-    const response = await fetch(`${this.baseUrl}/conversations/${conversationId}`, {
-      method: 'GET',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-    });
+    try {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
 
-    if (!response.ok) {
-      throw new Error('Failed to fetch conversation');
+      const response = await fetch(`${this.baseUrl}/conversations/${conversationId}`, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        signal: controller.signal,
+      });
+
+      clearTimeout(timeoutId);
+
+      if (!response.ok) {
+        throw new Error(`Failed to fetch conversation: ${response.status} ${response.statusText}`);
+      }
+
+      const data: ConversationResponse = await response.json();
+      if (!data.success) {
+        throw new Error('Failed to fetch conversation');
+      }
+
+      return data.conversation;
+    } catch (error: any) {
+      if (error.name === 'AbortError') {
+        throw new Error('Request timed out. The backend may not be responding.');
+      }
+      throw error;
     }
-
-    const data: ConversationResponse = await response.json();
-    if (!data.success) {
-      throw new Error('Failed to fetch conversation');
-    }
-
-    return data.conversation;
   }
 
   /**
    * Get all messages in a conversation
    */
   async getConversationMessages(conversationId: number): Promise<MessageDTO[]> {
-    const response = await fetch(
-      `${this.baseUrl}/conversations/${conversationId}/messages`,
-      {
-        method: 'GET',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+    try {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
+
+      const response = await fetch(
+        `${this.baseUrl}/conversations/${conversationId}/messages`,
+        {
+          method: 'GET',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          signal: controller.signal,
+        }
+      );
+
+      clearTimeout(timeoutId);
+
+      if (!response.ok) {
+        throw new Error(`Failed to fetch messages: ${response.status} ${response.statusText}`);
       }
-    );
 
-    if (!response.ok) {
-      throw new Error('Failed to fetch messages');
+      const data: MessagesResponse = await response.json();
+      if (!data.success) {
+        throw new Error('Failed to fetch messages');
+      }
+
+      return data.messages;
+    } catch (error: any) {
+      if (error.name === 'AbortError') {
+        throw new Error('Request timed out. The backend may not be responding.');
+      }
+      throw error;
     }
-
-    const data: MessagesResponse = await response.json();
-    if (!data.success) {
-      throw new Error('Failed to fetch messages');
-    }
-
-    return data.messages;
   }
 
   /**
@@ -174,52 +213,78 @@ class ChatService {
     conversationId: number,
     message: string
   ): Promise<{ userMessage: MessageDTO; aiMessage: MessageDTO; suggestions?: string[] }> {
-    const response = await fetch(
-      `${this.baseUrl}/conversations/${conversationId}/messages`,
-      {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ message }),
+    try {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 30000); // 30 second timeout for AI response
+
+      const response = await fetch(
+        `${this.baseUrl}/conversations/${conversationId}/messages`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ message }),
+          signal: controller.signal,
+        }
+      );
+
+      clearTimeout(timeoutId);
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.message || `Failed to send message: ${response.status} ${response.statusText}`);
       }
-    );
 
-    if (!response.ok) {
-      const errorData = await response.json().catch(() => ({}));
-      throw new Error(errorData.message || 'Failed to send message');
+      const data: SendMessageResponse = await response.json();
+      if (!data.success) {
+        throw new Error('Failed to send message');
+      }
+
+      return {
+        userMessage: data.userMessage,
+        aiMessage: data.aiMessage,
+        suggestions: data.suggestions,
+      };
+    } catch (error: any) {
+      if (error.name === 'AbortError') {
+        throw new Error('Request timed out. The AI service may not be responding.');
+      }
+      throw error;
     }
-
-    const data: SendMessageResponse = await response.json();
-    if (!data.success) {
-      throw new Error('Failed to send message');
-    }
-
-    return {
-      userMessage: data.userMessage,
-      aiMessage: data.aiMessage,
-      suggestions: data.suggestions,
-    };
   }
 
   /**
    * Delete a conversation
    */
   async deleteConversation(conversationId: number): Promise<void> {
-    const response = await fetch(`${this.baseUrl}/conversations/${conversationId}`, {
-      method: 'DELETE',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-    });
+    try {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
 
-    if (!response.ok) {
-      throw new Error('Failed to delete conversation');
-    }
+      const response = await fetch(`${this.baseUrl}/conversations/${conversationId}`, {
+        method: 'DELETE',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        signal: controller.signal,
+      });
 
-    const data = await response.json();
-    if (!data.success) {
-      throw new Error(data.message || 'Failed to delete conversation');
+      clearTimeout(timeoutId);
+
+      if (!response.ok) {
+        throw new Error(`Failed to delete conversation: ${response.status} ${response.statusText}`);
+      }
+
+      const data = await response.json();
+      if (!data.success) {
+        throw new Error(data.message || 'Failed to delete conversation');
+      }
+    } catch (error: any) {
+      if (error.name === 'AbortError') {
+        throw new Error('Request timed out. The backend may not be responding.');
+      }
+      throw error;
     }
   }
 }
