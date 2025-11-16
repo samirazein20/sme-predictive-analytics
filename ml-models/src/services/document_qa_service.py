@@ -291,7 +291,7 @@ class DocumentQAService:
                         "options": {
                             "temperature": 0.7,
                             "top_p": 0.9,
-                            "num_predict": 150
+                            "num_predict": 400  # Increased from 150 to allow fuller responses
                         }
                     },
                     timeout=30  # Cloud is faster
@@ -307,7 +307,7 @@ class DocumentQAService:
                         "options": {
                             "temperature": 0.7,
                             "top_p": 0.9,
-                            "num_predict": 150
+                            "num_predict": 400  # Increased from 150 to allow fuller responses
                         }
                     },
                     timeout=120  # Local needs more time
