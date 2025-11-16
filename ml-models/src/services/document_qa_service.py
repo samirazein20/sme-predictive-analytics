@@ -216,10 +216,15 @@ class DocumentQAService:
         """Build a comprehensive prompt for the AI model"""
 
         prompt_parts = [
-            "You are a friendly business advisor helping a small business owner understand their sales and business data.",
-            "Use simple, everyday language - avoid jargon and technical terms.",
-            "Explain numbers in a way that makes sense for running a business.",
-            "Always provide practical, actionable advice they can use right away.",
+            "You are a friendly business advisor talking to a small business owner who has NO technical background.",
+            "They don't know SQL, programming, or technical data analysis terms.",
+            "",
+            "CRITICAL RULES - YOU MUST FOLLOW THESE:",
+            "1. NEVER write SQL queries, code, or formulas (like 'ROI = (Revenue - Spend) / Spend')",
+            "2. NEVER use technical words like: aggregate, query, database, SELECT, GROUP BY, calculate, compute",
+            "3. ALWAYS use simple words: add up, total, compare, look at, figure out",
+            "4. ALWAYS explain in plain English how you'd figure something out by looking at the numbers",
+            "5. ALWAYS end with 1-2 simple action steps they can take today",
             "",
             "BUSINESS DATA YOU'RE ANALYZING:",
             f"- File: {context.get('file_name', 'Unknown')}",
@@ -263,17 +268,18 @@ class DocumentQAService:
             "CURRENT QUESTION:",
             question,
             "",
-            "HOW TO ANSWER:",
-            "- Use simple, everyday words - NO technical jargon or formulas",
-            "- Don't show SQL queries, calculations, or code",
-            "- Instead of 'aggregate', say 'add up' or 'total'",
-            "- Instead of 'ROI formula', explain 'money made compared to money spent'",
-            "- Use specific dollar amounts from the data when relevant",
-            "- If you can't answer with the data shown, explain what's missing in simple terms",
-            "- Always end with 1-2 specific actions the owner can take right away",
-            "- Keep answers short and to the point - business owners are busy!",
+            "HOW TO ANSWER (READ THIS CAREFULLY):",
+            "- Pretend you're explaining this to your grandmother who runs a shop",
+            "- NO CODE, NO SQL, NO FORMULAS - just plain English explanation",
+            "- If you need to explain a calculation, say: 'To find this, you'd look at your [column] numbers and add them up'",
+            "- Focus on WHAT THE NUMBERS MEAN for the business, not HOW to calculate them",
+            "- Be specific with dollar amounts and real numbers from the data",
+            "- If the data isn't enough, say: 'You'd need to see all the [specific thing] numbers to figure this out'",
+            "- End with: 'Here's what you can do right now:' followed by 1-2 simple actions",
             "",
-            "YOUR ANSWER:"
+            "REMEMBER: This person doesn't know technical terms. Talk like a helpful friend, not a data analyst.",
+            "",
+            "YOUR SIMPLE, FRIENDLY ANSWER:"
         ])
 
         return "\n".join(prompt_parts)
@@ -296,8 +302,8 @@ class DocumentQAService:
                         "prompt": prompt,
                         "stream": False,
                         "options": {
-                            "temperature": 0.7,
-                            "top_p": 0.9,
+                            "temperature": 0.9,  # Higher temperature for more creative, conversational responses
+                            "top_p": 0.95,
                             "num_predict": 400  # Increased from 150 to allow fuller responses
                         }
                     },
@@ -312,8 +318,8 @@ class DocumentQAService:
                         "prompt": prompt,
                         "stream": False,
                         "options": {
-                            "temperature": 0.7,
-                            "top_p": 0.9,
+                            "temperature": 0.9,  # Higher temperature for more creative, conversational responses
+                            "top_p": 0.95,
                             "num_predict": 400  # Increased from 150 to allow fuller responses
                         }
                     },
