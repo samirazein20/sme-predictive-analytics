@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import {
   Container,
@@ -22,11 +22,7 @@ const ChatPage: React.FC = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    loadConversationAndMessages();
-  }, [conversationId]);
-
-  const loadConversationAndMessages = async () => {
+  const loadConversationAndMessages = useCallback(async () => {
     if (!conversationId) {
       setError('No conversation ID provided');
       setIsLoading(false);
@@ -58,7 +54,11 @@ const ChatPage: React.FC = () => {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [conversationId]);
+
+  useEffect(() => {
+    loadConversationAndMessages();
+  }, [loadConversationAndMessages]);
 
   const handleSendMessage = async (message: string) => {
     if (!conversationId) return;

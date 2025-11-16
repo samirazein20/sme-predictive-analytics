@@ -50,7 +50,6 @@ import {
 import {
   CloudUpload,
   TrendingUp,
-  Analytics,
   CheckCircle,
   Info,
   ShowChart,
@@ -382,7 +381,7 @@ const Dashboard: React.FC = () => {
       conversationsLoadedRef.current = true;
       loadConversations();
     }
-  }, [activeTab]);
+  }, [activeTab, isLoadingConversations, loadConversations]);
 
   const handleTabChange = (event: React.SyntheticEvent, newValue: number) => {
     setActiveTab(newValue);
@@ -3371,7 +3370,7 @@ Upload CSV or Excel files with your business data to get started.`}
   );
 
   // Load conversations when chat tab is accessed
-  const loadConversations = async () => {
+  const loadConversations = useCallback(async () => {
     setIsLoadingConversations(true);
     try {
       // Using userId = 1 for demo purposes
@@ -3388,7 +3387,7 @@ Upload CSV or Excel files with your business data to get started.`}
     } finally {
       setIsLoadingConversations(false);
     }
-  };
+  }, []);
 
   // Start a new chat from an uploaded file
   const handleStartChat = async (fileId: number, fileName: string) => {
