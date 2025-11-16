@@ -2,11 +2,12 @@ import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { ThemeProvider, createTheme, useTheme } from '@mui/material/styles';
 import useMediaQuery from '@mui/material/useMediaQuery';
 import CssBaseline from '@mui/material/CssBaseline';
-import { BrowserRouter as Router, Routes, Route, useNavigate } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, useNavigate, useLocation } from 'react-router-dom';
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
 import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs';
 import { DatePicker } from '@mui/x-date-pickers/DatePicker';
 import dayjs, { Dayjs } from 'dayjs';
+import AIAssistant from './pages/AIAssistant';
 import { 
   Container,
   Box,
@@ -175,6 +176,7 @@ function TabPanel(props: TabPanelProps) {
 
 const Dashboard: React.FC = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const [activeTab, setActiveTab] = useState(0);
   const [uploadedFiles, setUploadedFiles] = useState<FileAnalysisResponse[]>([]);
   const [isUploading, setIsUploading] = useState(false);
@@ -293,6 +295,17 @@ const Dashboard: React.FC = () => {
       }, 1000);
     }
   }, []);
+
+  // Handle navigation from AI Assistant
+  useEffect(() => {
+    const locationState = location.state as any;
+    if (locationState?.action === 'upload-for-ai-assistant' || locationState?.action === 'open-upload-tab') {
+      // Switch to upload tab (tab index 1)
+      setActiveTab(1);
+      // Clear the navigation state
+      navigate(location.pathname, { replace: true, state: {} });
+    }
+  }, [location, navigate]);
 
   // Mobile responsive hooks
   const theme = useTheme();
@@ -1146,181 +1159,6 @@ const Dashboard: React.FC = () => {
 
   const renderOverview = () => (
     <>
-      {/* Hero Section - Value Proposition */}
-      <Box
-        sx={{
-          background: 'linear-gradient(135deg, #1e3c72 0%, #2a5298 100%)',
-          color: 'white',
-          borderRadius: 3,
-          p: { xs: 3, md: 5 },
-          mb: 4,
-          position: 'relative',
-          overflow: 'hidden'
-        }}
-      >
-        {/* Decorative elements */}
-        <Box sx={{
-          position: 'absolute',
-          top: -100,
-          right: -100,
-          width: 300,
-          height: 300,
-          borderRadius: '50%',
-          bgcolor: 'rgba(255,255,255,0.05)',
-          zIndex: 0
-        }} />
-        <Box sx={{
-          position: 'absolute',
-          bottom: -50,
-          left: -50,
-          width: 200,
-          height: 200,
-          borderRadius: '50%',
-          bgcolor: 'rgba(255,255,255,0.03)',
-          zIndex: 0
-        }} />
-
-        <Box sx={{ position: 'relative', zIndex: 1 }}>
-          <Typography
-            variant={isMobile ? 'h4' : 'h3'}
-            component="h1"
-            sx={{
-              fontWeight: 700,
-              mb: 2,
-              lineHeight: 1.2
-            }}
-          >
-            Smart Forecasting for Your Business
-          </Typography>
-          <Typography
-            variant={isMobile ? 'h6' : 'h5'}
-            sx={{
-              mb: 3,
-              opacity: 0.95,
-              fontWeight: 400,
-              maxWidth: 700
-            }}
-          >
-            Make better decisions with AI-powered predictions. Know what's coming next week, next month, or next quarter.
-          </Typography>
-
-          {/* Key Benefits - Business Outcomes */}
-          <Grid container spacing={2} sx={{ mb: 3, maxWidth: 900 }}>
-            <Grid item xs={12} sm={6} md={3}>
-              <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 1 }}>
-                <TrendingUp sx={{ fontSize: 24, color: '#4caf50' }} />
-                <Box>
-                  <Typography variant="body1" sx={{ fontWeight: 600 }}>
-                    Increase Revenue
-                  </Typography>
-                  <Typography variant="body2" sx={{ opacity: 0.9, fontSize: '0.875rem' }}>
-                    Optimize inventory and staffing
-                  </Typography>
-                </Box>
-              </Box>
-            </Grid>
-            <Grid item xs={12} sm={6} md={3}>
-              <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 1 }}>
-                <InventoryOutlined sx={{ fontSize: 24, color: '#ff9800' }} />
-                <Box>
-                  <Typography variant="body1" sx={{ fontWeight: 600 }}>
-                    Reduce Waste
-                  </Typography>
-                  <Typography variant="body2" sx={{ opacity: 0.9, fontSize: '0.875rem' }}>
-                    Order the right amount
-                  </Typography>
-                </Box>
-              </Box>
-            </Grid>
-            <Grid item xs={12} sm={6} md={3}>
-              <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 1 }}>
-                <Assessment sx={{ fontSize: 24, color: '#2196f3' }} />
-                <Box>
-                  <Typography variant="body1" sx={{ fontWeight: 600 }}>
-                    Save Time
-                  </Typography>
-                  <Typography variant="body2" sx={{ opacity: 0.9, fontSize: '0.875rem' }}>
-                    Automated insights in minutes
-                  </Typography>
-                </Box>
-              </Box>
-            </Grid>
-            <Grid item xs={12} sm={6} md={3}>
-              <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 1 }}>
-                <CheckCircle sx={{ fontSize: 24, color: '#4caf50' }} />
-                <Box>
-                  <Typography variant="body1" sx={{ fontWeight: 600 }}>
-                    Easy to Use
-                  </Typography>
-                  <Typography variant="body2" sx={{ opacity: 0.9, fontSize: '0.875rem' }}>
-                    No data science needed
-                  </Typography>
-                </Box>
-              </Box>
-            </Grid>
-          </Grid>
-
-          {/* CTA Buttons */}
-          <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap', mt: 4 }}>
-            {!quickStartCompleted && (
-              <Button
-                variant="contained"
-                size="large"
-                onClick={startQuickStart}
-                disabled={isUploading || isAnalyzing || quickStartActive}
-                sx={{
-                  bgcolor: '#4caf50',
-                  color: 'white',
-                  fontWeight: 700,
-                  px: 4,
-                  py: 1.5,
-                  fontSize: isMobile ? '1rem' : '1.1rem',
-                  '&:hover': {
-                    bgcolor: '#45a049',
-                    transform: 'scale(1.02)',
-                    transition: 'all 0.2s'
-                  },
-                  boxShadow: '0 4px 14px rgba(76, 175, 80, 0.4)'
-                }}
-                startIcon={quickStartActive ? <CircularProgress size={20} sx={{ color: 'white' }} /> : <ArrowForward />}
-              >
-                {quickStartActive ? 'Loading Demo...' : 'See It In Action'}
-              </Button>
-            )}
-            <Button
-              variant="outlined"
-              size="large"
-              onClick={() => setActiveTab(1)}
-              sx={{
-                borderColor: 'white',
-                color: 'white',
-                fontWeight: 600,
-                px: 4,
-                py: 1.5,
-                fontSize: isMobile ? '1rem' : '1.1rem',
-                '&:hover': {
-                  borderColor: 'white',
-                  bgcolor: 'rgba(255,255,255,0.1)',
-                  transform: 'scale(1.02)',
-                  transition: 'all 0.2s'
-                }
-              }}
-              startIcon={<CloudUpload />}
-            >
-              Upload Your Data
-            </Button>
-          </Box>
-
-          {/* Trust Signal */}
-          <Box sx={{ mt: 3, display: 'flex', alignItems: 'center', gap: 1, opacity: 0.9 }}>
-            <Lock sx={{ fontSize: 18 }} />
-            <Typography variant="body2">
-              Your data is secure and private. We never share it with anyone.
-            </Typography>
-          </Box>
-        </Box>
-      </Box>
-
       {/* Quick Start Active Progress */}
       {quickStartActive && quickStartStep > 0 && (
         <Alert
@@ -1376,6 +1214,120 @@ const Dashboard: React.FC = () => {
           </Typography>
         </Alert>
       )}
+
+      {/* AI Assistant CTA Banner */}
+      <Card
+        sx={{
+          mb: 5,
+          background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+          color: 'white',
+          cursor: 'pointer',
+          transition: 'all 0.3s',
+          '&:hover': {
+            transform: 'translateY(-4px)',
+            boxShadow: '0 12px 24px rgba(102, 126, 234, 0.4)'
+          }
+        }}
+        onClick={() => navigate('/ai-assistant')}
+      >
+        <CardContent sx={{ p: { xs: 3, md: 4 } }}>
+          <Grid container spacing={3} alignItems="center">
+            <Grid item xs={12} md={8}>
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 2 }}>
+                <Box
+                  sx={{
+                    width: 56,
+                    height: 56,
+                    borderRadius: '12px',
+                    bgcolor: 'rgba(255,255,255,0.2)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center'
+                  }}
+                >
+                  <Chat sx={{ fontSize: 32 }} />
+                </Box>
+                <Box>
+                  <Typography
+                    variant="h5"
+                    sx={{
+                      fontWeight: 700,
+                      mb: 0.5
+                    }}
+                  >
+                    ✨ AI Assistant for Small Business
+                  </Typography>
+                  <Typography variant="body2" sx={{ opacity: 0.95 }}>
+                    Financial planning, forecasting, analytics, and comparisons - all in one place
+                  </Typography>
+                </Box>
+              </Box>
+              <Typography variant="body1" sx={{ mb: 2, opacity: 0.9 }}>
+                Get instant insights about your finances, predict future trends, analyze performance, and compare periods - all with simple, easy-to-understand answers.
+              </Typography>
+              <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap', alignItems: 'center' }}>
+                <Chip
+                  label="💰 Financial Planning"
+                  sx={{
+                    bgcolor: 'rgba(255,255,255,0.2)',
+                    color: 'white',
+                    fontWeight: 600
+                  }}
+                />
+                <Chip
+                  label="🔮 Smart Forecasting"
+                  sx={{
+                    bgcolor: 'rgba(255,255,255,0.2)',
+                    color: 'white',
+                    fontWeight: 600
+                  }}
+                />
+                <Chip
+                  label="📊 Deep Analytics"
+                  sx={{
+                    bgcolor: 'rgba(255,255,255,0.2)',
+                    color: 'white',
+                    fontWeight: 600
+                  }}
+                />
+                <Chip
+                  label="⚖️ Easy Comparisons"
+                  sx={{
+                    bgcolor: 'rgba(255,255,255,0.2)',
+                    color: 'white',
+                    fontWeight: 600
+                  }}
+                />
+              </Box>
+            </Grid>
+            <Grid item xs={12} md={4} sx={{ textAlign: { xs: 'left', md: 'right' } }}>
+              <Button
+                variant="contained"
+                size="large"
+                endIcon={<ArrowForward />}
+                sx={{
+                  bgcolor: 'white',
+                  color: '#667eea',
+                  fontWeight: 700,
+                  px: 4,
+                  py: 1.5,
+                  fontSize: '1.1rem',
+                  '&:hover': {
+                    bgcolor: 'rgba(255,255,255,0.95)',
+                    transform: 'scale(1.05)'
+                  },
+                  boxShadow: '0 4px 14px rgba(0,0,0,0.2)'
+                }}
+              >
+                Try It Now
+              </Button>
+              <Typography variant="caption" sx={{ display: 'block', mt: 1, opacity: 0.9 }}>
+                15 pre-built prompts ready to use
+              </Typography>
+            </Grid>
+          </Grid>
+        </CardContent>
+      </Card>
 
       {/* How It Works - Simple 3-Step Process */}
       <Box sx={{ mb: 5 }}>
@@ -1835,6 +1787,52 @@ const Dashboard: React.FC = () => {
       <Typography variant="body1" paragraph>
         Upload your CSV or Excel files to get started with predictions.
       </Typography>
+      
+      {/* Financial Assistant Prompt Banner */}
+      {sessionStorage.getItem('pendingFinancialPrompt') && (
+        <Alert
+          severity="success"
+          icon={<Chat />}
+          sx={{
+            mb: 3,
+            backgroundColor: '#f3e5f5',
+            border: '2px solid #9c27b0',
+            '& .MuiAlert-message': {
+              width: '100%'
+            }
+          }}
+        >
+          <Box>
+            <Typography variant="subtitle1" sx={{ fontWeight: 700, mb: 1 }}>
+              💡 Financial Question Ready!
+            </Typography>
+            <Typography variant="body2" sx={{ mb: 1.5 }}>
+              <strong>"{sessionStorage.getItem('pendingFinancialPromptTitle')}"</strong>
+            </Typography>
+            <Typography variant="body2" color="text.secondary" sx={{ mb: 1.5 }}>
+              Upload your financial data (sales, expenses, revenue, etc.) and we'll automatically answer your question using AI.
+            </Typography>
+            <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
+              <Chip 
+                label="Step 1: Upload your data below" 
+                color="primary" 
+                size="small"
+                sx={{ fontWeight: 600 }}
+              />
+              <Chip 
+                label="Step 2: We'll analyze it automatically" 
+                variant="outlined" 
+                size="small"
+              />
+              <Chip 
+                label="Step 3: Get your answer in chat" 
+                variant="outlined" 
+                size="small"
+              />
+            </Box>
+          </Box>
+        </Alert>
+      )}
       
       {/* Privacy Banner */}
       <Alert 
@@ -3395,13 +3393,32 @@ Upload CSV or Excel files with your business data to get started.`}
     try {
       const userId = 1; // Demo user ID
       console.log('Creating conversation for userId:', userId);
+      
+      // Check if there's a pending financial prompt
+      const pendingPrompt = sessionStorage.getItem('pendingFinancialPrompt');
+      const pendingTitle = sessionStorage.getItem('pendingFinancialPromptTitle');
+      
       const conversation = await chatService.createConversation({
         userId,
         uploadedFileId: fileId,
-        title: `Chat about ${fileName}`
+        title: pendingTitle || `Chat about ${fileName}`
       });
       
       console.log('Conversation created successfully:', conversation);
+      
+      // If there's a pending prompt, send it automatically
+      if (pendingPrompt) {
+        console.log('Sending pending financial prompt:', pendingPrompt);
+        try {
+          await chatService.sendMessage(conversation.id, pendingPrompt);
+          // Clear the pending prompt
+          sessionStorage.removeItem('pendingFinancialPrompt');
+          sessionStorage.removeItem('pendingFinancialPromptTitle');
+        } catch (error) {
+          console.error('Error sending pending prompt:', error);
+        }
+      }
+      
       // Navigate to the chat page
       navigate(`/chat/${conversation.id}`);
     } catch (error) {
@@ -4125,6 +4142,7 @@ function App() {
       <Router>
         <Routes>
           <Route path="/" element={<Dashboard />} />
+          <Route path="/ai-assistant" element={<AIAssistant />} />
           <Route path="/chat/:conversationId" element={<ChatPage />} />
         </Routes>
       </Router>
