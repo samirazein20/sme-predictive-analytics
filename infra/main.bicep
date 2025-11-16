@@ -191,7 +191,7 @@ resource postgresConnectionStringSecret 'Microsoft.KeyVault/vaults/secrets@2023-
   parent: keyVault
   name: 'postgres-connection-string'
   properties: {
-    value: 'postgresql://${postgresAdminUser}:${postgresAdminPassword}@${postgresServer.properties.fullyQualifiedDomainName}:5432/${postgresDatabaseName}?sslmode=require'
+    value: 'jdbc:postgresql://${postgresServer.properties.fullyQualifiedDomainName}:5432/${postgresDatabaseName}?user=${postgresAdminUser}&password=${postgresAdminPassword}&sslmode=require'
   }
 }
 
