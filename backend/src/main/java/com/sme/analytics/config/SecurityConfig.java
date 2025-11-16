@@ -42,7 +42,8 @@ public class SecurityConfig {
             "http://127.0.0.1:3000",
             "http://localhost",
             "http://127.0.0.1",
-            "https://frontend.prouddesert-fa0ab96d.eastus.azurecontainerapps.io"
+            "https://frontend.prouddesert-fa0ab96d.eastus.azurecontainerapps.io",
+            "https://mango-field-0834a600f.3.azurestaticapps.net"
         ));
         configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH", "HEAD"));
         configuration.setAllowedHeaders(Arrays.asList("*"));
