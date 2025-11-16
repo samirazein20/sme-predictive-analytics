@@ -216,57 +216,64 @@ class DocumentQAService:
         """Build a comprehensive prompt for the AI model"""
 
         prompt_parts = [
-            "You are a data analysis assistant helping a business owner understand their data.",
+            "You are a friendly business advisor helping a small business owner understand their sales and business data.",
+            "Use simple, everyday language - avoid jargon and technical terms.",
+            "Explain numbers in a way that makes sense for running a business.",
+            "Always provide practical, actionable advice they can use right away.",
             "",
-            "DOCUMENT INFORMATION:",
+            "BUSINESS DATA YOU'RE ANALYZING:",
             f"- File: {context.get('file_name', 'Unknown')}",
-            f"- Rows: {context.get('row_count', 0):,}",
-            f"- Columns: {', '.join(context.get('columns', []))}",
+            f"- Total Records: {context.get('row_count', 0):,}",
+            f"- Information Categories: {', '.join(context.get('columns', []))}",
             "",
-            "DATA SUMMARY:",
+            "WHAT THIS DATA SHOWS:",
             context.get('summary', 'No summary available'),
             "",
-            "STATISTICS:"
+            "KEY NUMBERS:"
         ]
 
-        # Add numeric statistics
+        # Add numeric statistics in plain language
         if "statistics" in context and "numeric" in context["statistics"]:
-            prompt_parts.append("\nNumeric Columns:")
+            prompt_parts.append("\nYour Business Numbers:")
             for col, stats in context["statistics"]["numeric"].items():
                 prompt_parts.append(f"  {col}:")
                 if stats.get("mean") is not None:
-                    prompt_parts.append(f"    - Average: {stats['mean']:.2f}")
+                    prompt_parts.append(f"    - Typical value: ${stats['mean']:,.2f}" if 'revenue' in col.lower() or 'sales' in col.lower() or 'spend' in col.lower() else f"    - Average: {stats['mean']:.2f}")
                 if stats.get("min") is not None and stats.get("max") is not None:
-                    prompt_parts.append(f"    - Range: {stats['min']:.2f} to {stats['max']:.2f}")
+                    prompt_parts.append(f"    - Lowest to Highest: {stats['min']:.2f} to {stats['max']:.2f}")
 
-        # Add sample data
+        # Add sample data with business context
         if "sample_data" in context and context["sample_data"]:
-            prompt_parts.append("\nSAMPLE DATA (first 3 rows):")
+            prompt_parts.append("\nEXAMPLE RECORDS (to give you a sense of the data):")
             for i, row in enumerate(context["sample_data"][:3], 1):
-                prompt_parts.append(f"  Row {i}: {json.dumps(row, default=str)}")
+                prompt_parts.append(f"  Day/Entry {i}: {json.dumps(row, default=str)}")
 
         # Add conversation history if available
         if history:
-            prompt_parts.append("\nPREVIOUS CONVERSATION:")
+            prompt_parts.append("\nWHAT WE'VE DISCUSSED BEFORE:")
             for msg in history[-5:]:  # Last 5 messages for context
                 sender = msg.get("sender_type", "USER")
                 content = msg.get("content", "")
-                prompt_parts.append(f"  {sender}: {content}")
+                role = "You asked" if sender == "USER" else "You learned"
+                prompt_parts.append(f"  {role}: {content}")
 
         # Add the user's question
         prompt_parts.extend([
             "",
-            "USER QUESTION:",
+            "CURRENT QUESTION:",
             question,
             "",
-            "INSTRUCTIONS:",
-            "- Provide a clear, concise answer based on the data provided",
-            "- Use specific numbers and statistics when relevant",
-            "- If you can't answer based on the available data, say so clearly",
-            "- Suggest actionable insights when appropriate",
-            "- Keep your response focused and business-oriented",
+            "HOW TO ANSWER:",
+            "- Use simple, everyday words - NO technical jargon or formulas",
+            "- Don't show SQL queries, calculations, or code",
+            "- Instead of 'aggregate', say 'add up' or 'total'",
+            "- Instead of 'ROI formula', explain 'money made compared to money spent'",
+            "- Use specific dollar amounts from the data when relevant",
+            "- If you can't answer with the data shown, explain what's missing in simple terms",
+            "- Always end with 1-2 specific actions the owner can take right away",
+            "- Keep answers short and to the point - business owners are busy!",
             "",
-            "ANSWER:"
+            "YOUR ANSWER:"
         ])
 
         return "\n".join(prompt_parts)
@@ -348,19 +355,42 @@ class DocumentQAService:
         return references
 
     def _generate_follow_up_suggestions(self, question: str, context: Dict[str, Any]) -> List[str]:
-        """Generate suggested follow-up questions"""
+        """Generate suggested follow-up questions in simple, business-friendly language"""
         suggestions = []
 
         numeric_cols = context.get("numeric_columns", [])
+        columns = context.get("columns", [])
 
-        # Generic suggestions based on data type
-        if numeric_cols:
-            if len(numeric_cols) > 0:
-                suggestions.append(f"What is the trend for {numeric_cols[0]}?")
-            if len(numeric_cols) > 1:
-                suggestions.append(f"How does {numeric_cols[0]} correlate with {numeric_cols[1]}?")
-            suggestions.append("What are the outliers in this dataset?")
-
-        suggestions.append("Can you summarize the key insights from this data?")
+        # Business-oriented suggestions based on actual data columns
+        # Look for common business metrics in column names
+        revenue_cols = [col for col in columns if any(term in col.lower() for term in ["revenue", "sales", "income"])]
+        cost_cols = [col for col in columns if any(term in col.lower() for term in ["cost", "spend", "expense"])]
+        channel_cols = [col for col in columns if any(term in col.lower() for term in ["channel", "source", "platform"])]
+        product_cols = [col for col in columns if any(term in col.lower() for term in ["product", "item", "category"])]
+        
+        # Revenue/Sales questions
+        if revenue_cols:
+            suggestions.append(f"What's my best performing day for {revenue_cols[0].lower()}?")
+            suggestions.append(f"How much {revenue_cols[0].lower()} am I averaging per day?")
+        
+        # Channel/Source comparison
+        if channel_cols and revenue_cols:
+            suggestions.append(f"Which {channel_cols[0].lower()} brings in the most money?")
+        
+        # Cost/Spend analysis
+        if cost_cols:
+            suggestions.append(f"Where am I spending the most money?")
+        
+        # Product analysis
+        if product_cols:
+            suggestions.append(f"Which {product_cols[0].lower()} sells best?")
+        
+        # Generic business questions if we didn't find specific columns
+        if not suggestions:
+            if numeric_cols:
+                suggestions.append("What are my strongest days?")
+                suggestions.append("Where should I focus my efforts?")
+            suggestions.append("What's the big picture story here?")
 
         return suggestions[:3]  # Return top 3 suggestions
+
