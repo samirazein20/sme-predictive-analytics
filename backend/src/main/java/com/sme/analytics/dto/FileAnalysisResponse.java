@@ -15,7 +15,9 @@ public class FileAnalysisResponse {
     private Map<String, Object> basicStatistics;
     private List<DataInsight> insights;
     private String analysisType;
-    
+    private Long conversationId;
+    private Long uploadedFileId;
+
     public FileAnalysisResponse() {}
     
     public static FileAnalysisResponseBuilder builder() {
@@ -55,7 +57,13 @@ public class FileAnalysisResponse {
     
     public String getAnalysisType() { return analysisType; }
     public void setAnalysisType(String analysisType) { this.analysisType = analysisType; }
-    
+
+    public Long getConversationId() { return conversationId; }
+    public void setConversationId(Long conversationId) { this.conversationId = conversationId; }
+
+    public Long getUploadedFileId() { return uploadedFileId; }
+    public void setUploadedFileId(Long uploadedFileId) { this.uploadedFileId = uploadedFileId; }
+
     // Builder class
     public static class FileAnalysisResponseBuilder {
         private final FileAnalysisResponse response = new FileAnalysisResponse();
@@ -114,7 +122,17 @@ public class FileAnalysisResponse {
             response.setAnalysisType(analysisType);
             return this;
         }
-        
+
+        public FileAnalysisResponseBuilder conversationId(Long conversationId) {
+            response.setConversationId(conversationId);
+            return this;
+        }
+
+        public FileAnalysisResponseBuilder uploadedFileId(Long uploadedFileId) {
+            response.setUploadedFileId(uploadedFileId);
+            return this;
+        }
+
         public FileAnalysisResponse build() {
             return response;
         }

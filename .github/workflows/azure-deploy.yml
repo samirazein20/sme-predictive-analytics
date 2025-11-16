@@ -2,36 +2,62 @@ name: Azure CI/CD - Build and Deploy
 
 on:
   push:
-    branches: [ main ]
+    branches: [ '**' ]  # Run on push to any branch
   workflow_dispatch:  # Allow manual trigger
 
 env:
-  AZURE_RESOURCE_GROUP: rg-sme-analytics-prod
-  AZURE_CONTAINER_REGISTRY: acrk2mc444oapoak
-  AZURE_LOCATION: eastus
+  AZURE_RESOURCE_GROUP: rg-sme-analytics-predictive-prod
+  AZURE_CONTAINER_REGISTRY: acrsmeanalyticsqt3msdscrytpm
+  AZURE_LOCATION: eastus2
   
-  # Container App names
-  BACKEND_APP: backend
-  ML_SERVICES_APP: ml-services
-  FRONTEND_APP: frontend
+  # Container App names (Backend and ML only)
+  BACKEND_APP: sme-analytics-api
+  ML_SERVICES_APP: sme-predictive-engine
+  
+  # Static Web App name
+  STATIC_WEB_APP_NAME: stapp-sme-analytics
   
   # Image names
   BACKEND_IMAGE: backend
   ML_SERVICES_IMAGE: ml-services
-  FRONTEND_IMAGE: frontend
 
 jobs:
-  # Job 1: Build and Test Backend
-  build-backend:
+  # Detect which services changed
+  detect-changes:
     runs-on: ubuntu-latest
+    outputs:
+      backend: ${{ steps.filter.outputs.backend }}
+      ml-services: ${{ steps.filter.outputs.ml-services }}
+      frontend: ${{ steps.filter.outputs.frontend }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Set up JDK 17
+      - name: Check for changes
+        uses: dorny/paths-filter@v3
+        id: filter
+        with:
+          filters: |
+            backend:
+              - 'backend/**'
+            ml-services:
+              - 'ml-models/**'
+            frontend:
+              - 'frontend/**'
+
+  # Job 1: Build and Test Backend
+  build-backend:
+    runs-on: ubuntu-latest
+    needs: detect-changes
+    if: needs.detect-changes.outputs.backend == 'true'
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 21
         uses: actions/setup-java@v4
         with:
-          java-version: '17'
+          java-version: '21'
           distribution: 'temurin'
           cache: 'maven'
 
@@ -45,15 +71,17 @@ jobs:
           cd backend
           ./mvnw clean package -DskipTests
 
+      - name: Azure Login
+        uses: azure/login@v2
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
       - name: Log in to Azure Container Registry
-        uses: docker/login-action@v3
-        with:
-          registry: ${{ env.AZURE_CONTAINER_REGISTRY }}.azurecr.io
-          username: ${{ secrets.AZURE_ACR_USERNAME }}
-          password: ${{ secrets.AZURE_ACR_PASSWORD }}
+        run: |
+          az acr login --name ${{ env.AZURE_CONTAINER_REGISTRY }}
 
       - name: Build and push backend Docker image
         uses: docker/build-push-action@v5
@@ -69,6 +97,8 @@ jobs:
   # Job 2: Build and Test ML Services
   build-ml-services:
     runs-on: ubuntu-latest
+    needs: detect-changes
+    if: needs.detect-changes.outputs.ml-services == 'true'
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -101,15 +131,17 @@ jobs:
           cd ml-models
           python -m pytest tests/ -v
 
+      - name: Azure Login
+        uses: azure/login@v2
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
       - name: Log in to Azure Container Registry
-        uses: docker/login-action@v3
-        with:
-          registry: ${{ env.AZURE_CONTAINER_REGISTRY }}.azurecr.io
-          username: ${{ secrets.AZURE_ACR_USERNAME }}
-          password: ${{ secrets.AZURE_ACR_PASSWORD }}
+        run: |
+          az acr login --name ${{ env.AZURE_CONTAINER_REGISTRY }}
 
       - name: Build and push ML services Docker image
         uses: docker/build-push-action@v5
@@ -131,12 +163,31 @@ jobs:
           echo "Disk space after ML build:"
           df -h
 
-  # Job 3: Build and Test Frontend
-  build-frontend:
+  # Job 3: Deploy Frontend to Azure Static Web Apps
+  deploy-frontend:
     runs-on: ubuntu-latest
+    needs: detect-changes
+    if: needs.detect-changes.outputs.frontend == 'true'
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+        with:
+          submodules: true
+
+      - name: Azure Login
+        uses: azure/login@v2
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+      - name: Get Backend URL
+        id: get-backend-url
+        run: |
+          BACKEND_URL=$(az deployment group show \
+            --resource-group ${{ env.AZURE_RESOURCE_GROUP }} \
+            --name main \
+            --query properties.outputs.backenD_URL.value -o tsv)
+          echo "url=$BACKEND_URL" >> $GITHUB_OUTPUT
+          echo "Backend URL: $BACKEND_URL"
 
       - name: Set up Node.js 18
         uses: actions/setup-node@v4
@@ -157,34 +208,27 @@ jobs:
         env:
           CI: true
 
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
-
-      - name: Log in to Azure Container Registry
-        uses: docker/login-action@v3
+      - name: Deploy to Azure Static Web Apps
+        uses: Azure/static-web-apps-deploy@v1
         with:
-          registry: ${{ env.AZURE_CONTAINER_REGISTRY }}.azurecr.io
-          username: ${{ secrets.AZURE_ACR_USERNAME }}
-          password: ${{ secrets.AZURE_ACR_PASSWORD }}
+          azure_static_web_apps_api_token: ${{ secrets.AZURE_STATIC_WEB_APPS_API_TOKEN }}
+          repo_token: ${{ secrets.GITHUB_TOKEN }}
+          action: "upload"
+          app_location: "frontend"
+          api_location: ""
+          output_location: "build"
+        env:
+          REACT_APP_API_BASE_URL: ${{ steps.get-backend-url.outputs.url }}/api
+          REACT_APP_WS_BASE_URL: wss://${{ steps.get-backend-url.outputs.url }}/ws
 
-      - name: Build and push frontend Docker image
-        uses: docker/build-push-action@v5
-        with:
-          context: frontend
-          push: true
-          tags: |
-            ${{ env.AZURE_CONTAINER_REGISTRY }}.azurecr.io/${{ env.FRONTEND_IMAGE }}:latest
-            ${{ env.AZURE_CONTAINER_REGISTRY }}.azurecr.io/${{ env.FRONTEND_IMAGE }}:${{ github.sha }}
-          cache-from: type=registry,ref=${{ env.AZURE_CONTAINER_REGISTRY }}.azurecr.io/${{ env.FRONTEND_IMAGE }}:buildcache
-          cache-to: type=registry,ref=${{ env.AZURE_CONTAINER_REGISTRY }}.azurecr.io/${{ env.FRONTEND_IMAGE }}:buildcache,mode=max
-
-  # Job 4: Deploy to Azure Container Apps
+  # Job 4: Deploy to Azure (Backend and ML to Container Apps)
   deploy-to-azure:
     runs-on: ubuntu-latest
-    needs: [build-backend, build-ml-services, build-frontend]
+    needs: [detect-changes, build-backend, build-ml-services, deploy-frontend]
+    if: always() && (needs.detect-changes.outputs.backend == 'true' || needs.detect-changes.outputs.ml-services == 'true')
     environment:
       name: production
-      url: https://frontend.prouddesert-fa0ab96d.eastus.azurecontainerapps.io
+      url: ${{ steps.get-backend-url.outputs.url }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -194,7 +238,18 @@ jobs:
         with:
           creds: ${{ secrets.AZURE_CREDENTIALS }}
 
+      - name: Get Backend URL
+        id: get-backend-url
+        run: |
+          BACKEND_URL=$(az deployment group show \
+            --resource-group ${{ env.AZURE_RESOURCE_GROUP }} \
+            --name main \
+            --query properties.outputs.backenD_URL.value -o tsv)
+          echo "url=$BACKEND_URL" >> $GITHUB_OUTPUT
+          echo "Backend URL: $BACKEND_URL"
+
       - name: Deploy Backend Container App
+        if: needs.detect-changes.outputs.backend == 'true'
         run: |
           az containerapp update \
             --name ${{ env.BACKEND_APP }} \
@@ -202,62 +257,50 @@ jobs:
             --image ${{ env.AZURE_CONTAINER_REGISTRY }}.azurecr.io/${{ env.BACKEND_IMAGE }}:${{ github.sha }}
 
       - name: Deploy ML Services Container App
+        if: needs.detect-changes.outputs.ml-services == 'true'
         run: |
           az containerapp update \
             --name ${{ env.ML_SERVICES_APP }} \
             --resource-group ${{ env.AZURE_RESOURCE_GROUP }} \
             --image ${{ env.AZURE_CONTAINER_REGISTRY }}.azurecr.io/${{ env.ML_SERVICES_IMAGE }}:${{ github.sha }}
 
-      - name: Deploy Frontend Container App
-        run: |
-          az containerapp update \
-            --name ${{ env.FRONTEND_APP }} \
-            --resource-group ${{ env.AZURE_RESOURCE_GROUP }} \
-            --image ${{ env.AZURE_CONTAINER_REGISTRY }}.azurecr.io/${{ env.FRONTEND_IMAGE }}:${{ github.sha }}
-
       - name: Verify Deployment - Backend
+        if: needs.detect-changes.outputs.backend == 'true'
         run: |
           echo "Waiting for backend to be ready..."
-          sleep 30
-          curl -f https://backend.prouddesert-fa0ab96d.eastus.azurecontainerapps.io/api/v1/data/health || exit 1
+          sleep 60
+          BACKEND_URL="${{ steps.get-backend-url.outputs.url }}"
+          curl -f ${BACKEND_URL}/api/v1/data/health || exit 1
           echo "✅ Backend is healthy"
 
       - name: Verify Deployment - ML Services
+        if: needs.detect-changes.outputs.ml-services == 'true'
         run: |
           echo "Waiting for ML services to be ready..."
           sleep 30
-          curl -f https://ml-services.prouddesert-fa0ab96d.eastus.azurecontainerapps.io/health || exit 1
-          echo "✅ ML Services is healthy"
-
-      - name: Verify Deployment - Frontend
-        run: |
-          echo "Waiting for frontend to be ready..."
-          sleep 30
-          # Frontend has IP restrictions, so verify via Azure CLI instead of curl
-          REVISION=$(az containerapp revision list \
-            --name ${{ env.FRONTEND_APP }} \
+          ML_URL=$(az containerapp show \
+            --name ${{ env.ML_SERVICES_APP }} \
             --resource-group ${{ env.AZURE_RESOURCE_GROUP }} \
-            --query "[0].properties.healthState" -o tsv)
-          echo "Frontend health state: $REVISION"
-          if [ "$REVISION" != "Healthy" ]; then
-            echo "❌ Frontend is not healthy"
-            exit 1
-          fi
-          echo "✅ Frontend is healthy (verified via Azure CLI)"
+            --query properties.configuration.ingress.fqdn -o tsv)
+          curl -f https://${ML_URL}/health || exit 1
+          echo "✅ ML Services is healthy"
 
       - name: Deployment Summary
         run: |
           echo "🎉 Deployment Complete!"
           echo ""
-          echo "📦 Deployed Images:"
+          echo "📦 Deployed Components:"
           echo "  - Backend: ${{ env.AZURE_CONTAINER_REGISTRY }}.azurecr.io/${{ env.BACKEND_IMAGE }}:${{ github.sha }}"
           echo "  - ML Services: ${{ env.AZURE_CONTAINER_REGISTRY }}.azurecr.io/${{ env.ML_SERVICES_IMAGE }}:${{ github.sha }}"
-          echo "  - Frontend: ${{ env.AZURE_CONTAINER_REGISTRY }}.azurecr.io/${{ env.FRONTEND_IMAGE }}:${{ github.sha }}"
           echo ""
           echo "🌐 Application URLs:"
-          echo "  - Frontend: https://frontend.prouddesert-fa0ab96d.eastus.azurecontainerapps.io (IP restricted)"
-          echo "  - Backend: https://backend.prouddesert-fa0ab96d.eastus.azurecontainerapps.io"
-          echo "  - ML Services: https://ml-services.prouddesert-fa0ab96d.eastus.azurecontainerapps.io"
+          echo "  - Frontend: Azure Static Web Apps (deployed separately)"
+          echo "  - Backend: ${{ steps.get-backend-url.outputs.url }}"
+          echo ""
+          echo "💰 Cost Optimization:"
+          echo "  - Frontend: Static Web Apps (Free tier)"
+          echo "  - Backend: Container Apps (~$30-50/month)"
+          echo "  - ML Services: Container Apps (~$30-50/month)"
 
       - name: Azure Logout
         run: az logout

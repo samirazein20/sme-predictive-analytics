@@ -1,0 +1,16 @@
+{
+  "short_name": "SME Analytics",
+  "name": "SME Predictive Analytics Platform",
+  "description": "AI-powered business analytics and predictions for SMEs",
+  "icons": [
+    {
+      "src": "favicon.svg",
+      "type": "image/svg+xml",
+      "sizes": "any"
+    }
+  ],
+  "start_url": ".",
+  "display": "standalone",
+  "theme_color": "#1976d2",
+  "background_color": "#ffffff"
+}

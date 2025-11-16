@@ -12,6 +12,8 @@ export interface FileAnalysisResponse {
   basicStatistics: Record<string, any>;
   insights: DataInsight[];
   analysisType: string;
+  conversationId?: number;
+  uploadedFileId?: number;
 }
 
 export interface DataInsight {
@@ -211,6 +213,16 @@ class ApiService {
       console.error('Failed to retrieve predictions:', error);
       return null;
     }
+  }
+
+  // Get backend URL for direct fetch calls
+  getBackendUrl(): string {
+    return this.backendUrl;
+  }
+
+  // Get ML service URL for direct fetch calls
+  getMLServiceUrl(): string {
+    return this.mlServiceUrl;
   }
 }
 

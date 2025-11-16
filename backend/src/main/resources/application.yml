@@ -8,7 +8,7 @@ spring:
       - org.springframework.boot.autoconfigure.data.redis.RedisRepositoriesAutoConfiguration
 
   datasource:
-    url: jdbc:postgresql://postgres:5432/sme_analytics_dev
+    url: jdbc:postgresql://${DATABASE_HOST:localhost}:5432/sme_analytics_dev
     username: dev_user
     password: dev_password
     driver-class-name: org.postgresql.Driver
@@ -37,8 +37,32 @@ spring:
       name: admin
       password: admin123
 
+  mail:
+    host: ${SMTP_HOST:smtp.gmail.com}
+    port: ${SMTP_PORT:587}
+    username: ${SMTP_USERNAME:}
+    password: ${SMTP_PASSWORD:}
+    from: ${SMTP_FROM:noreply@sme-analytics.com}
+    properties:
+      mail:
+        smtp:
+          auth: true
+          starttls:
+            enable: true
+            required: true
+          connectiontimeout: 5000
+          timeout: 5000
+          writetimeout: 5000
+
 server:
   port: 8080
+
+app:
+  name: SME Analytics Platform
+
+ml:
+  service:
+    url: http://${ML_SERVICE_HOST:ml-services}:${ML_SERVICE_PORT:8001}
 
 management:
   server:

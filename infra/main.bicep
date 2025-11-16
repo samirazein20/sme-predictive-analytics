@@ -13,23 +13,23 @@ param location string = resourceGroup().location
 // Resource token for unique naming
 var resourceToken = uniqueString(subscription().id, resourceGroup().id, location, environmentName)
 
-// Resource name prefixes (3 chars max)
-var keyVaultPrefix = 'kv'
-var containerRegistryPrefix = 'acr'
-var logAnalyticsPrefix = 'log'
-var containerAppEnvPrefix = 'cae'
-var postgresPrefix = 'psql'
-var redisPrefix = 'rds'
-var managedIdentityPrefix = 'id'
+// SME Analytics resource name prefixes
+var keyVaultPrefix = 'kv-sme-analytics'
+var containerRegistryPrefix = 'acrsmeanalytics'
+var logAnalyticsPrefix = 'log-sme-analytics'
+var containerAppEnvPrefix = 'cae-sme-analytics'
+var postgresPrefix = 'psql-sme-analytics'
+var redisPrefix = 'redis-sme-analytics'
+var managedIdentityPrefix = 'id-sme-analytics'
 
-// Resource names (max 32 chars total)
-var keyVaultName = take('${keyVaultPrefix}${resourceToken}', 24)
-var containerRegistryName = take('${containerRegistryPrefix}${resourceToken}', 32)
-var logAnalyticsName = take('${logAnalyticsPrefix}${resourceToken}', 32)
-var containerAppEnvName = take('${containerAppEnvPrefix}${resourceToken}', 32)
-var postgresServerName = take('${postgresPrefix}${resourceToken}', 32)
-var redisName = take('${redisPrefix}${resourceToken}', 32)
-var managedIdentityName = take('${managedIdentityPrefix}${resourceToken}', 32)
+// Resource names (with meaningful prefixes)
+var keyVaultName = take('${keyVaultPrefix}-${resourceToken}', 24)
+var containerRegistryName = take('${containerRegistryPrefix}${resourceToken}', 50)
+var logAnalyticsName = take('${logAnalyticsPrefix}-${resourceToken}', 63)
+var containerAppEnvName = take('${containerAppEnvPrefix}-${resourceToken}', 60)
+var postgresServerName = take('${postgresPrefix}-${resourceToken}', 63)
+var redisName = take('${redisPrefix}-${resourceToken}', 63)
+var managedIdentityName = take('${managedIdentityPrefix}-${resourceToken}', 128)
 
 // Database configuration
 @secure()
@@ -62,7 +62,7 @@ resource logAnalytics 'Microsoft.OperationalInsights/workspaces@2022-10-01' = {
 
 // ====== Application Insights ======
 resource appInsights 'Microsoft.Insights/components@2020-02-02' = {
-  name: 'appi-${resourceToken}'
+  name: 'appi-sme-analytics-${resourceToken}'
   location: location
   kind: 'web'
   properties: {
@@ -191,7 +191,7 @@ resource postgresConnectionStringSecret 'Microsoft.KeyVault/vaults/secrets@2023-
   parent: keyVault
   name: 'postgres-connection-string'
   properties: {
-    value: 'postgresql://${postgresAdminUser}:${postgresAdminPassword}@${postgresServer.properties.fullyQualifiedDomainName}:5432/${postgresDatabaseName}?sslmode=require'
+    value: 'jdbc:postgresql://${postgresServer.properties.fullyQualifiedDomainName}:5432/${postgresDatabaseName}?user=${postgresAdminUser}&password=${postgresAdminPassword}&sslmode=require'
   }
 }
 
@@ -204,7 +204,7 @@ resource redisConnectionStringSecret 'Microsoft.KeyVault/vaults/secrets@2023-07-
   }
 }
 
-// ====== Container Apps Environment ======
+// ====== Container Apps Environment (for Backend and ML Services) ======
 resource containerAppEnv 'Microsoft.App/managedEnvironments@2023-05-01' = {
   name: containerAppEnvName
   location: location
@@ -219,9 +219,9 @@ resource containerAppEnv 'Microsoft.App/managedEnvironments@2023-05-01' = {
   }
 }
 
-// ====== Backend Container App (Spring Boot) ======
+// ====== Backend Container App (Spring Boot API) ======
 resource backendApp 'Microsoft.App/containerApps@2023-05-01' = {
-  name: 'backend'
+  name: 'sme-analytics-api'
   location: location
   tags: {
     'azd-service-name': 'backend'
@@ -255,25 +255,19 @@ resource backendApp 'Microsoft.App/containerApps@2023-05-01' = {
       ]
       secrets: [
         {
-          name: 'postgres-connection'
-          keyVaultUrl: postgresConnectionStringSecret.properties.secretUri
-          identity: managedIdentity.id
+          name: 'postgres-connection-string'
+          value: 'postgresql://${postgresAdminUser}:${postgresAdminPassword}@${postgresServer.properties.fullyQualifiedDomainName}:5432/${postgresDatabaseName}?sslmode=require'
         }
         {
-          name: 'redis-connection'
-          keyVaultUrl: redisConnectionStringSecret.properties.secretUri
-          identity: managedIdentity.id
-        }
-        {
-          name: 'appinsights-key'
-          value: appInsights.properties.InstrumentationKey
+          name: 'redis-password'
+          value: redisCache.listKeys().primaryKey
         }
       ]
     }
     template: {
       containers: [
         {
-          name: 'backend'
+          name: 'sme-analytics-api'
           image: 'mcr.microsoft.com/azuredocs/containerapps-helloworld:latest' // Base image (will be updated during deployment)
           resources: {
             cpu: json('1.0')
@@ -285,8 +279,8 @@ resource backendApp 'Microsoft.App/containerApps@2023-05-01' = {
               value: 'production'
             }
             {
-              name: 'DATABASE_URL'
-              secretRef: 'postgres-connection'
+              name: 'SPRING_DATASOURCE_URL'
+              secretRef: 'postgres-connection-string'
             }
             {
               name: 'SPRING_REDIS_HOST'
@@ -298,7 +292,7 @@ resource backendApp 'Microsoft.App/containerApps@2023-05-01' = {
             }
             {
               name: 'SPRING_REDIS_PASSWORD'
-              secretRef: 'redis-connection'
+              secretRef: 'redis-password'
             }
             {
               name: 'SPRING_REDIS_SSL'
@@ -308,12 +302,16 @@ resource backendApp 'Microsoft.App/containerApps@2023-05-01' = {
               name: 'APPLICATIONINSIGHTS_CONNECTION_STRING'
               value: appInsights.properties.ConnectionString
             }
+            {
+              name: 'SERVER_PORT'
+              value: '8080'
+            }
           ]
         }
       ]
       scale: {
         minReplicas: 1
-        maxReplicas: 3
+        maxReplicas: 5
       }
     }
   }
@@ -324,7 +322,7 @@ resource backendApp 'Microsoft.App/containerApps@2023-05-01' = {
 
 // ====== ML Services Container App (FastAPI) ======
 resource mlServicesApp 'Microsoft.App/containerApps@2023-05-01' = {
-  name: 'ml-services'
+  name: 'sme-predictive-engine'
   location: location
   tags: {
     'azd-service-name': 'ml-services'
@@ -366,7 +364,7 @@ resource mlServicesApp 'Microsoft.App/containerApps@2023-05-01' = {
     template: {
       containers: [
         {
-          name: 'ml-services'
+          name: 'sme-predictive-engine'
           image: 'mcr.microsoft.com/azuredocs/containerapps-helloworld:latest' // Base image (will be updated during deployment)
           resources: {
             cpu: json('1.0')
@@ -391,82 +389,47 @@ resource mlServicesApp 'Microsoft.App/containerApps@2023-05-01' = {
   ]
 }
 
-// ====== Frontend Container App (React + Nginx) ======
-resource frontendApp 'Microsoft.App/containerApps@2023-05-01' = {
-  name: 'frontend'
+// ====== Azure Static Web App (Frontend) ======
+// Note: Static Web App is deployed via GitHub Actions workflow
+// Commenting out to avoid deployment errors with repository URL
+/*
+resource staticWebApp 'Microsoft.Web/staticSites@2023-01-01' = {
+  name: 'stapp-${resourceToken}'
   location: location
-  tags: {
-    'azd-service-name': 'frontend'
-  }
-  identity: {
-    type: 'UserAssigned'
-    userAssignedIdentities: {
-      '${managedIdentity.id}': {}
-    }
+  sku: {
+    name: 'Free'
+    tier: 'Free'
   }
   properties: {
-    managedEnvironmentId: containerAppEnv.id
-    configuration: {
-      activeRevisionsMode: 'Single'
-      ingress: {
-        external: true
-        targetPort: 3000
-        transport: 'http'
-        corsPolicy: {
-          allowedOrigins: ['*']
-          allowedMethods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS']
-          allowedHeaders: ['*']
-          allowCredentials: false
-        }
-      }
-      registries: [
-        {
-          server: containerRegistry.properties.loginServer
-          identity: managedIdentity.id
-        }
-      ]
+    repositoryUrl: '' // Will be configured via GitHub Actions
+    branch: 'main'
+    buildProperties: {
+      appLocation: 'frontend'
+      apiLocation: ''
+      outputLocation: 'build'
     }
-    template: {
-      containers: [
-        {
-          name: 'frontend'
-          image: 'mcr.microsoft.com/azuredocs/containerapps-helloworld:latest' // Base image (will be updated during deployment)
-          resources: {
-            cpu: json('0.5')
-            memory: '1Gi'
-          }
-          env: [
-            {
-              name: 'REACT_APP_BACKEND_URL'
-              value: 'https://${backendApp.properties.configuration.ingress.fqdn}'
-            }
-            {
-              name: 'REACT_APP_ML_URL'
-              value: 'https://${mlServicesApp.properties.configuration.ingress.fqdn}'
-            }
-          ]
-        }
-      ]
-      scale: {
-        minReplicas: 1
-        maxReplicas: 3
-      }
-    }
+    stagingEnvironmentPolicy: 'Enabled'
+    allowConfigFileUpdates: true
+    provider: 'GitHub'
   }
-  dependsOn: [
-    acrPullRole
-  ]
+  tags: {
+    'app-component': 'frontend'
+  }
 }
+*/
 
 // ====== Outputs (REQUIRED) ======
 output RESOURCE_GROUP_ID string = resourceGroup().id
 output AZURE_CONTAINER_REGISTRY_ENDPOINT string = containerRegistry.properties.loginServer
 output AZURE_CONTAINER_REGISTRY_NAME string = containerRegistry.name
 output BACKEND_URL string = 'https://${backendApp.properties.configuration.ingress.fqdn}'
+output BACKEND_APP_NAME string = backendApp.name
 output ML_SERVICES_URL string = 'https://${mlServicesApp.properties.configuration.ingress.fqdn}'
-output FRONTEND_URL string = 'https://${frontendApp.properties.configuration.ingress.fqdn}'
+// output FRONTEND_URL string = 'https://${staticWebApp.properties.defaultHostname}'
+// output STATIC_WEB_APP_NAME string = staticWebApp.name
 output POSTGRES_SERVER_NAME string = postgresServer.properties.fullyQualifiedDomainName
 output REDIS_HOST string = redisCache.properties.hostName
 output KEY_VAULT_NAME string = keyVault.name
 output MANAGED_IDENTITY_CLIENT_ID string = managedIdentity.properties.clientId
 output APPLICATION_INSIGHTS_CONNECTION_STRING string = appInsights.properties.ConnectionString
+output CONTAINER_APP_ENVIRONMENT_NAME string = containerAppEnv.name
