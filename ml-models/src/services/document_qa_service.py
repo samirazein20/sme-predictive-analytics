@@ -341,7 +341,7 @@ class DocumentQAService:
         for col in context.get("columns", []):
             if col.lower() in question_lower:
                 references[col] = {
-                    "type": context["dtypes"].get(col, "unknown"),
+                    "type": context.get("dtypes", {}).get(col, "unknown"),
                     "stats": context.get("statistics", {}).get("numeric", {}).get(col, {})
                 }
 
