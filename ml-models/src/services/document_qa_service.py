@@ -20,13 +20,36 @@ class DocumentQAService:
     """Service for answering questions about uploaded documents using AI"""
 
     def __init__(self):
-        self.ollama_url = os.getenv("OLLAMA_BASE_URL", "http://ollama:11434")
-        self.model_name = "llama3.1:8b"
+        # Check if using Ollama Cloud
+        self.use_cloud = os.getenv("OLLAMA_USE_CLOUD", "false").lower() == "true"
+        
+        if self.use_cloud:
+            # Ollama Cloud configuration
+            self.ollama_api_key = os.getenv("OLLAMA_API_KEY")
+            self.model_name = os.getenv("OLLAMA_MODEL", "gpt-oss:20b-cloud")
+            self.ollama_url = "https://ollama.com"
+            logger.info(f"🌐 Using Ollama Cloud with model: {self.model_name}")
+            
+            if not self.ollama_api_key:
+                logger.warning("⚠️  OLLAMA_API_KEY not set - Ollama Cloud will not work")
+        else:
+            # Local Ollama configuration
+            self.ollama_url = os.getenv("OLLAMA_BASE_URL", "http://ollama:11434")
+            self.model_name = "llama3.1:8b"
+            logger.info(f"🏠 Using Local Ollama at {self.ollama_url}")
+        
         self.model_loaded = False
         self._preload_model()
     
     def _preload_model(self):
         """Preload the model to keep it in memory"""
+        if self.use_cloud:
+            # Cloud models are always ready - no preloading needed
+            logger.info(f"✅ Ollama Cloud model {self.model_name} ready (no preload required)")
+            self.model_loaded = True
+            return
+        
+        # Local Ollama - preload model
         logger.info(f"Starting model preload for {self.model_name}...")
         try:
             # Send a simple request to load the model
@@ -249,33 +272,59 @@ class DocumentQAService:
         return "\n".join(prompt_parts)
 
     def _call_ollama(self, prompt: str) -> str:
-        """Call Ollama API for text generation"""
+        """Call Ollama API for text generation (supports both cloud and local)"""
         try:
-            response = requests.post(
-                f"{self.ollama_url}/api/generate",
-                json={
-                    "model": self.model_name,
-                    "prompt": prompt,
-                    "stream": False,
-                    "options": {
-                        "temperature": 0.7,
-                        "top_p": 0.9,
-                        "num_predict": 150  # Limit tokens to speed up responses
-                    }
-                },
-                timeout=120  # Increased timeout to allow model loading
-            )
+            if self.use_cloud:
+                # Use Ollama Cloud API
+                headers = {
+                    "Authorization": f"Bearer {self.ollama_api_key}",
+                    "Content-Type": "application/json"
+                }
+                
+                response = requests.post(
+                    f"{self.ollama_url}/api/generate",
+                    headers=headers,
+                    json={
+                        "model": self.model_name,
+                        "prompt": prompt,
+                        "stream": False,
+                        "options": {
+                            "temperature": 0.7,
+                            "top_p": 0.9,
+                            "num_predict": 150
+                        }
+                    },
+                    timeout=30  # Cloud is faster
+                )
+            else:
+                # Use Local Ollama API
+                response = requests.post(
+                    f"{self.ollama_url}/api/generate",
+                    json={
+                        "model": self.model_name,
+                        "prompt": prompt,
+                        "stream": False,
+                        "options": {
+                            "temperature": 0.7,
+                            "top_p": 0.9,
+                            "num_predict": 150
+                        }
+                    },
+                    timeout=120  # Local needs more time
+                )
 
             if response.status_code == 200:
                 result = response.json()
                 return result.get("response", "Unable to generate response")
             else:
+                logger.error(f"Ollama API error: {response.status_code} - {response.text}")
                 return f"Error calling Ollama API: {response.status_code}"
 
         except requests.exceptions.ConnectionError:
             # Fallback response if Ollama is not available
             return self._generate_fallback_response(prompt)
         except Exception as e:
+            logger.error(f"Error calling Ollama: {str(e)}")
             return f"Error: {str(e)}"
 
     def _generate_fallback_response(self, prompt: str) -> str:
