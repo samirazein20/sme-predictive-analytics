@@ -729,7 +729,7 @@ const Dashboard: React.FC = () => {
       const reportType = includedSections || 'Full Analysis';
       
       // Call backend API to send email
-      const response = await fetch('http://localhost:8080/api/reports/email', {
+      const response = await fetch(`${apiService.getBackendUrl()}/api/reports/email`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -891,7 +891,7 @@ const Dashboard: React.FC = () => {
   const fetchSchedules = async () => {
     setIsLoadingSchedules(true);
     try {
-      const response = await fetch('http://localhost:8080/api/schedules');
+      const response = await fetch(`${apiService.getBackendUrl()}/api/schedules`);
       if (response.ok) {
         const data = await response.json();
         setSchedules(data);
@@ -911,8 +911,8 @@ const Dashboard: React.FC = () => {
   const handleSaveSchedule = async () => {
     try {
       const url = selectedSchedule 
-        ? `http://localhost:8080/api/schedules/${selectedSchedule.id}`
-        : 'http://localhost:8080/api/schedules';
+        ? `${apiService.getBackendUrl()}/api/schedules/${selectedSchedule.id}`
+        : `${apiService.getBackendUrl()}/api/schedules`;
       
       const method = selectedSchedule ? 'PUT' : 'POST';
 
@@ -953,7 +953,7 @@ const Dashboard: React.FC = () => {
     if (!window.confirm('Are you sure you want to delete this schedule?')) return;
 
     try {
-      const response = await fetch(`http://localhost:8080/api/schedules/${id}`, {
+      const response = await fetch(`${apiService.getBackendUrl()}/api/schedules/${id}`, {
         method: 'DELETE'
       });
 
@@ -976,7 +976,7 @@ const Dashboard: React.FC = () => {
 
   const handleToggleSchedule = async (id: number) => {
     try {
-      const response = await fetch(`http://localhost:8080/api/schedules/${id}/toggle`, {
+      const response = await fetch(`${apiService.getBackendUrl()}/api/schedules/${id}/toggle`, {
         method: 'POST'
       });
 

@@ -214,6 +214,16 @@ class ApiService {
       return null;
     }
   }
+
+  // Get backend URL for direct fetch calls
+  getBackendUrl(): string {
+    return this.backendUrl;
+  }
+
+  // Get ML service URL for direct fetch calls
+  getMLServiceUrl(): string {
+    return this.mlServiceUrl;
+  }
 }
 
 export const apiService = new ApiService();
