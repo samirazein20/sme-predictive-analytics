@@ -6,13 +6,13 @@ on:
   workflow_dispatch:  # Allow manual trigger
 
 env:
-  AZURE_RESOURCE_GROUP: rg-sme-analytics-prod
-  AZURE_CONTAINER_REGISTRY: acrk2mc444oapoak
+  AZURE_RESOURCE_GROUP: rg-sme-analytics-predictive-prod
+  AZURE_CONTAINER_REGISTRY: acrsmeanalyticsqt3msdscrytpm
   AZURE_LOCATION: eastus2
   
   # Container App names (Backend and ML only)
-  BACKEND_APP: backend
-  ML_SERVICES_APP: ml-services
+  BACKEND_APP: sme-analytics-api
+  ML_SERVICES_APP: sme-predictive-engine
   
   # Static Web App name
   STATIC_WEB_APP_NAME: stapp-sme-analytics

@@ -13,23 +13,23 @@ param location string = resourceGroup().location
 // Resource token for unique naming
 var resourceToken = uniqueString(subscription().id, resourceGroup().id, location, environmentName)
 
-// Resource name prefixes (3 chars max)
-var keyVaultPrefix = 'kv'
-var containerRegistryPrefix = 'acr'
-var logAnalyticsPrefix = 'log'
-var containerAppEnvPrefix = 'cae'
-var postgresPrefix = 'psql'
-var redisPrefix = 'rds'
-var managedIdentityPrefix = 'id'
+// SME Analytics resource name prefixes
+var keyVaultPrefix = 'kv-sme-analytics'
+var containerRegistryPrefix = 'acrsmeanalytics'
+var logAnalyticsPrefix = 'log-sme-analytics'
+var containerAppEnvPrefix = 'cae-sme-analytics'
+var postgresPrefix = 'psql-sme-analytics'
+var redisPrefix = 'redis-sme-analytics'
+var managedIdentityPrefix = 'id-sme-analytics'
 
-// Resource names (max 32 chars total)
-var keyVaultName = take('${keyVaultPrefix}${resourceToken}', 24)
-var containerRegistryName = take('${containerRegistryPrefix}${resourceToken}', 32)
-var logAnalyticsName = take('${logAnalyticsPrefix}${resourceToken}', 32)
-var containerAppEnvName = take('${containerAppEnvPrefix}${resourceToken}', 32)
-var postgresServerName = take('${postgresPrefix}${resourceToken}', 32)
-var redisName = take('${redisPrefix}${resourceToken}', 32)
-var managedIdentityName = take('${managedIdentityPrefix}${resourceToken}', 32)
+// Resource names (with meaningful prefixes)
+var keyVaultName = take('${keyVaultPrefix}-${resourceToken}', 24)
+var containerRegistryName = take('${containerRegistryPrefix}${resourceToken}', 50)
+var logAnalyticsName = take('${logAnalyticsPrefix}-${resourceToken}', 63)
+var containerAppEnvName = take('${containerAppEnvPrefix}-${resourceToken}', 60)
+var postgresServerName = take('${postgresPrefix}-${resourceToken}', 63)
+var redisName = take('${redisPrefix}-${resourceToken}', 63)
+var managedIdentityName = take('${managedIdentityPrefix}-${resourceToken}', 128)
 
 // Database configuration
 @secure()
@@ -62,7 +62,7 @@ resource logAnalytics 'Microsoft.OperationalInsights/workspaces@2022-10-01' = {
 
 // ====== Application Insights ======
 resource appInsights 'Microsoft.Insights/components@2020-02-02' = {
-  name: 'appi-${resourceToken}'
+  name: 'appi-sme-analytics-${resourceToken}'
   location: location
   kind: 'web'
   properties: {
@@ -221,7 +221,7 @@ resource containerAppEnv 'Microsoft.App/managedEnvironments@2023-05-01' = {
 
 // ====== Backend Container App (Spring Boot API) ======
 resource backendApp 'Microsoft.App/containerApps@2023-05-01' = {
-  name: 'backend'
+  name: 'sme-analytics-api'
   location: location
   tags: {
     'azd-service-name': 'backend'
@@ -267,7 +267,7 @@ resource backendApp 'Microsoft.App/containerApps@2023-05-01' = {
     template: {
       containers: [
         {
-          name: 'backend'
+          name: 'sme-analytics-api'
           image: 'mcr.microsoft.com/azuredocs/containerapps-helloworld:latest' // Base image (will be updated during deployment)
           resources: {
             cpu: json('1.0')
@@ -322,7 +322,7 @@ resource backendApp 'Microsoft.App/containerApps@2023-05-01' = {
 
 // ====== ML Services Container App (FastAPI) ======
 resource mlServicesApp 'Microsoft.App/containerApps@2023-05-01' = {
-  name: 'ml-services'
+  name: 'sme-predictive-engine'
   location: location
   tags: {
     'azd-service-name': 'ml-services'
@@ -364,7 +364,7 @@ resource mlServicesApp 'Microsoft.App/containerApps@2023-05-01' = {
     template: {
       containers: [
         {
-          name: 'ml-services'
+          name: 'sme-predictive-engine'
           image: 'mcr.microsoft.com/azuredocs/containerapps-helloworld:latest' // Base image (will be updated during deployment)
           resources: {
             cpu: json('1.0')
