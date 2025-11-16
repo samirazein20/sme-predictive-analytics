@@ -376,6 +376,25 @@ const Dashboard: React.FC = () => {
   }, []);
 
   // Load conversations when chat tab is accessed
+  const loadConversations = useCallback(async () => {
+    setIsLoadingConversations(true);
+    try {
+      // Using userId = 1 for demo purposes
+      const userId = 1;
+      const convos = await chatService.getUserConversations(userId);
+      setConversations(convos);
+    } catch (error) {
+      console.error('Error loading conversations:', error);
+      setSnackbar({
+        open: true,
+        message: 'Failed to load conversations',
+        severity: 'error'
+      });
+    } finally {
+      setIsLoadingConversations(false);
+    }
+  }, []);
+
   useEffect(() => {
     if (activeTab === 5 && !conversationsLoadedRef.current && !isLoadingConversations) {
       conversationsLoadedRef.current = true;
@@ -3368,26 +3387,6 @@ Upload CSV or Excel files with your business data to get started.`}
       </Paper>
     </LocalizationProvider>
   );
-
-  // Load conversations when chat tab is accessed
-  const loadConversations = useCallback(async () => {
-    setIsLoadingConversations(true);
-    try {
-      // Using userId = 1 for demo purposes
-      const userId = 1;
-      const convos = await chatService.getUserConversations(userId);
-      setConversations(convos);
-    } catch (error) {
-      console.error('Error loading conversations:', error);
-      setSnackbar({
-        open: true,
-        message: 'Failed to load conversations',
-        severity: 'error'
-      });
-    } finally {
-      setIsLoadingConversations(false);
-    }
-  }, []);
 
   // Start a new chat from an uploaded file
   const handleStartChat = async (fileId: number, fileName: string) => {
