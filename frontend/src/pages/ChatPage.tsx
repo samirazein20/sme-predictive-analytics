@@ -7,11 +7,11 @@ import {
   CircularProgress,
   Alert,
   Button,
-  Paper,
 } from '@mui/material';
-import { ArrowBack as ArrowBackIcon } from '@mui/icons-material';
+import { ArrowBack as ArrowBackIcon, Chat as ChatIcon, Description } from '@mui/icons-material';
 import ChatInterface, { Message } from '../components/ChatInterface';
 import chatService, { ConversationDTO, MessageDTO } from '../services/chatService';
+import { baseCardStyle } from '../theme/cardStyles';
 
 const ChatPage: React.FC = () => {
   const { conversationId } = useParams<{ conversationId: string }>();
@@ -95,78 +95,154 @@ const ChatPage: React.FC = () => {
     navigate('/dashboard');
   };
 
-  if (isLoading) {
-    return (
-      <Container maxWidth="lg" sx={{ mt: 4 }}>
-        <Box display="flex" justifyContent="center" alignItems="center" minHeight="400px">
-          <CircularProgress />
+  const renderHeader = () => (
+    <Box
+      sx={{
+        bgcolor: 'white',
+        borderBottom: 1,
+        borderColor: 'divider',
+        boxShadow: '0 1px 3px rgba(15,23,42,0.08)',
+        position: 'sticky',
+        top: 0,
+        zIndex: 10,
+        mb: 3
+      }}
+    >
+      <Container maxWidth="lg">
+        <Box sx={{
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          minHeight: '72px',
+          py: 2
+        }}>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+            <Box
+              sx={{
+                width: 48,
+                height: 48,
+                background: 'linear-gradient(135deg, #1e3a8a 0%, #1e40af 100%)',
+                borderRadius: 1.5,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                boxShadow: '0 2px 8px rgba(30, 58, 138, 0.25)'
+              }}
+            >
+              <ChatIcon sx={{ fontSize: 28, color: 'white' }} />
+            </Box>
+            <Box>
+              <Typography variant="h5" fontWeight={700} color="#1e293b">
+                {conversation?.title || 'Chat'}
+              </Typography>
+              {conversation && (
+                <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
+                  <Description sx={{ fontSize: 14, verticalAlign: 'text-bottom', mr: 0.5 }} />
+                  {conversation.fileName}
+                </Typography>
+              )}
+            </Box>
+          </Box>
+          <Button
+            startIcon={<ArrowBackIcon />}
+            onClick={handleBack}
+            sx={{
+              color: '#64748b',
+              fontWeight: 600,
+              textTransform: 'none',
+              '&:hover': {
+                bgcolor: '#f1f5f9'
+              }
+            }}
+          >
+            Back to Dashboard
+          </Button>
         </Box>
       </Container>
+    </Box>
+  );
+
+  if (isLoading) {
+    return (
+      <Box sx={{ minHeight: '100vh', bgcolor: '#f8fafc' }}>
+        {renderHeader()}
+        <Container maxWidth="lg">
+          <Box display="flex" justifyContent="center" alignItems="center" minHeight="400px">
+            <CircularProgress />
+          </Box>
+        </Container>
+      </Box>
     );
   }
 
   if (error) {
     return (
-      <Container maxWidth="lg" sx={{ mt: 4 }}>
-        <Alert severity="error" sx={{ mb: 2 }}>
-          {error}
-        </Alert>
-        <Button
-          variant="contained"
-          startIcon={<ArrowBackIcon />}
-          onClick={handleBack}
-        >
-          Back to Dashboard
-        </Button>
-      </Container>
+      <Box sx={{ minHeight: '100vh', bgcolor: '#f8fafc' }}>
+        {renderHeader()}
+        <Container maxWidth="lg">
+          <Alert severity="error" sx={{ mb: 2, ...baseCardStyle }}>
+            {error}
+          </Alert>
+          <Button
+            variant="contained"
+            startIcon={<ArrowBackIcon />}
+            onClick={handleBack}
+            sx={{
+              bgcolor: '#1e3a8a',
+              textTransform: 'none',
+              fontWeight: 600,
+              '&:hover': {
+                bgcolor: '#1e40af'
+              }
+            }}
+          >
+            Back to Dashboard
+          </Button>
+        </Container>
+      </Box>
     );
   }
 
   if (!conversation) {
     return (
-      <Container maxWidth="lg" sx={{ mt: 4 }}>
-        <Alert severity="warning">Conversation not found</Alert>
-        <Button
-          variant="contained"
-          startIcon={<ArrowBackIcon />}
-          onClick={handleBack}
-          sx={{ mt: 2 }}
-        >
-          Back to Dashboard
-        </Button>
-      </Container>
+      <Box sx={{ minHeight: '100vh', bgcolor: '#f8fafc' }}>
+        {renderHeader()}
+        <Container maxWidth="lg">
+          <Alert severity="warning" sx={{ mb: 2, ...baseCardStyle }}>
+            Conversation not found
+          </Alert>
+          <Button
+            variant="contained"
+            startIcon={<ArrowBackIcon />}
+            onClick={handleBack}
+            sx={{
+              bgcolor: '#1e3a8a',
+              textTransform: 'none',
+              fontWeight: 600,
+              '&:hover': {
+                bgcolor: '#1e40af'
+              }
+            }}
+          >
+            Back to Dashboard
+          </Button>
+        </Container>
+      </Box>
     );
   }
 
   return (
-    <Container maxWidth="lg" sx={{ mt: 4, mb: 4 }}>
-      <Box sx={{ mb: 3 }}>
-        <Button
-          variant="outlined"
-          startIcon={<ArrowBackIcon />}
-          onClick={handleBack}
-          sx={{ mb: 2 }}
-        >
-          Back to Dashboard
-        </Button>
-
-        <Paper sx={{ p: 2, mb: 2 }}>
-          <Typography variant="h4" gutterBottom>
-            {conversation.title}
-          </Typography>
-          <Typography variant="body2" color="text.secondary">
-            Conversation about: {conversation.fileName}
-          </Typography>
-        </Paper>
-      </Box>
-
-      <ChatInterface
-        conversationId={parseInt(conversationId!)}
-        messages={messages}
-        onSendMessage={handleSendMessage}
-        fileName={conversation.fileName}
-      />
-    </Container>
+    <Box sx={{ minHeight: '100vh', bgcolor: '#f8fafc' }}>
+      {renderHeader()}
+      <Container maxWidth="lg" sx={{ pb: 4 }}>
+        <ChatInterface
+          conversationId={parseInt(conversationId!)}
+          messages={messages}
+          onSendMessage={handleSendMessage}
+          fileName={conversation.fileName}
+        />
+      </Container>
+    </Box>
   );
 };
 

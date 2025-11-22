@@ -25,8 +25,11 @@ import {
   Description,
   Calculate,
   Bolt,
-  ArrowBack
+  ArrowBack,
+  CloudUpload,
+  Lightbulb
 } from '@mui/icons-material';
+import { baseCardStyle, baseCardHoverStyle } from '../theme/cardStyles';
 
 interface PromptCard {
   id: string;
@@ -221,28 +224,44 @@ const AIAssistant: React.FC = () => {
   };
 
   return (
-    <Box sx={{ minHeight: '100vh', background: 'linear-gradient(135deg, #f5f3ff 0%, #ffffff 50%, #eff6ff 100%)' }}>
-      {/* Header */}
-      <Box sx={{ bgcolor: 'white', borderBottom: 1, borderColor: 'divider', boxShadow: 1 }}>
-        <Container maxWidth="lg" sx={{ py: 3 }}>
-          <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+    <Box sx={{ minHeight: '100vh', bgcolor: '#f8fafc' }}>
+      {/* Header - Matching App.tsx AppBar Style */}
+      <Box
+        sx={{
+          bgcolor: 'white',
+          borderBottom: 1,
+          borderColor: 'divider',
+          boxShadow: '0 1px 3px rgba(15,23,42,0.08)',
+          position: 'sticky',
+          top: 0,
+          zIndex: 10
+        }}
+      >
+        <Container maxWidth="lg">
+          <Box sx={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            minHeight: '72px',
+            py: 2
+          }}>
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
               <Box
                 sx={{
-                  width: 56,
-                  height: 56,
-                  background: 'linear-gradient(135deg, #9333ea 0%, #6366f1 100%)',
-                  borderRadius: 2,
+                  width: 48,
+                  height: 48,
+                  background: 'linear-gradient(135deg, #400e02 0%, #5a1403 100%)',
+                  borderRadius: 1.5,
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
-                  boxShadow: 3
+                  boxShadow: '0 2px 8px rgba(64, 14, 2, 0.25)'
                 }}
               >
-                <AutoAwesome sx={{ fontSize: 32, color: 'white' }} />
+                <Psychology sx={{ fontSize: 28, color: 'white' }} />
               </Box>
               <Box>
-                <Typography variant="h4" fontWeight={700} color="text.primary">
+                <Typography variant="h5" fontWeight={700} color="#1e293b">
                   AI Assistant for Small Business
                 </Typography>
                 <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
@@ -253,7 +272,14 @@ const AIAssistant: React.FC = () => {
             <Button
               startIcon={<ArrowBack />}
               onClick={() => navigate('/')}
-              sx={{ color: 'text.secondary' }}
+              sx={{
+                color: '#64748b',
+                fontWeight: 600,
+                textTransform: 'none',
+                '&:hover': {
+                  bgcolor: '#f1f5f9'
+                }
+              }}
             >
               Back to Dashboard
             </Button>
@@ -261,17 +287,18 @@ const AIAssistant: React.FC = () => {
         </Container>
       </Box>
 
-      <Container maxWidth="lg" sx={{ py: 6 }}>
+      <Container maxWidth="lg" sx={{ py: 4 }}>
         {/* Hero Section */}
         <Card
           sx={{
-            mb: 6,
-            background: 'linear-gradient(135deg, #9333ea 0%, #6366f1 100%)',
+            ...baseCardStyle,
+            mb: 4,
+            background: 'linear-gradient(135deg, #400e02 0%, #5a1403 100%)',
             color: 'white',
-            boxShadow: 4
+            overflow: 'hidden'
           }}
         >
-          <CardContent sx={{ p: 4 }}>
+          <CardContent sx={{ p: { xs: 3, md: 4 } }}>
             <Typography variant="h5" fontWeight={700} gutterBottom>
               Your AI-Powered Business Advisor
             </Typography>
@@ -280,13 +307,26 @@ const AIAssistant: React.FC = () => {
               and compare performance - all in simple, easy-to-understand language.
             </Typography>
             <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 2 }}>
-              {['💰 Financial Planning', '🔮 Smart Forecasting', '📊 Deep Analytics', '⚖️ Easy Comparisons'].map((label) => (
-                <Chip
-                  key={label}
-                  label={label}
-                  sx={{ bgcolor: 'rgba(255,255,255,0.2)', color: 'white', fontWeight: 600 }}
-                />
-              ))}
+              <Chip
+                icon={<AttachMoney sx={{ color: 'white !important' }} />}
+                label="Financial Planning"
+                sx={{ bgcolor: 'rgba(255,255,255,0.15)', color: 'white', fontWeight: 600 }}
+              />
+              <Chip
+                icon={<TrendingUp sx={{ color: 'white !important' }} />}
+                label="Smart Forecasting"
+                sx={{ bgcolor: 'rgba(255,255,255,0.15)', color: 'white', fontWeight: 600 }}
+              />
+              <Chip
+                icon={<BarChart sx={{ color: 'white !important' }} />}
+                label="Deep Analytics"
+                sx={{ bgcolor: 'rgba(255,255,255,0.15)', color: 'white', fontWeight: 600 }}
+              />
+              <Chip
+                icon={<CompareArrows sx={{ color: 'white !important' }} />}
+                label="Easy Comparisons"
+                sx={{ bgcolor: 'rgba(255,255,255,0.15)', color: 'white', fontWeight: 600 }}
+              />
             </Box>
           </CardContent>
         </Card>
@@ -303,17 +343,30 @@ const AIAssistant: React.FC = () => {
                 variant={isSelected ? 'contained' : 'outlined'}
                 startIcon={<Icon />}
                 sx={{
-                  ...(isSelected && {
-                    background: `linear-gradient(135deg, ${category.color}, ${category.color}dd)`,
+                  ...(isSelected ? {
+                    bgcolor: '#1e3a8a',
                     color: 'white',
-                    transform: 'scale(1.05)',
-                    boxShadow: 3
+                    borderColor: '#1e3a8a',
+                    transform: 'scale(1.02)',
+                    boxShadow: '0 4px 12px rgba(30, 58, 138, 0.25)',
+                    '&:hover': {
+                      bgcolor: '#1e3a8a',
+                      boxShadow: '0 6px 16px rgba(30, 58, 138, 0.35)'
+                    }
+                  } : {
+                    borderColor: '#cbd5e1',
+                    color: '#64748b',
+                    '&:hover': {
+                      borderColor: '#1e3a8a',
+                      bgcolor: '#f1f5f9'
+                    }
                   }),
                   fontWeight: 600,
-                  px: 3,
+                  px: { xs: 2, md: 3 },
                   py: 1.5,
                   borderRadius: 2,
-                  textTransform: 'none'
+                  textTransform: 'none',
+                  transition: 'all 0.2s ease'
                 }}
               >
                 {category.name}
@@ -321,7 +374,7 @@ const AIAssistant: React.FC = () => {
                   <Chip
                     label={promptCards.filter(p => category.id === 'all' || p.category === category.id).length}
                     size="small"
-                    sx={{ ml: 1, bgcolor: 'rgba(255,255,255,0.3)', color: 'white', height: 20 }}
+                    sx={{ ml: 1, bgcolor: 'rgba(255,255,255,0.25)', color: 'white', height: 20, fontWeight: 700 }}
                   />
                 )}
               </Button>
@@ -337,13 +390,10 @@ const AIAssistant: React.FC = () => {
               <Grid item xs={12} sm={6} md={4} key={card.id}>
                 <Card
                   sx={{
+                    ...baseCardStyle,
+                    ...baseCardHoverStyle,
                     height: '100%',
-                    cursor: 'pointer',
-                    transition: 'all 0.2s',
-                    '&:hover': {
-                      transform: 'translateY(-4px)',
-                      boxShadow: 6
-                    }
+                    cursor: 'pointer'
                   }}
                   onClick={() => handlePromptClick(card.prompt)}
                 >
@@ -387,16 +437,16 @@ const AIAssistant: React.FC = () => {
         </Grid>
 
         {/* How It Works */}
-        <Card sx={{ mt: 8, boxShadow: 3 }}>
-          <CardContent sx={{ p: 4 }}>
-            <Typography variant="h5" fontWeight={700} align="center" gutterBottom>
+        <Card sx={{ mt: 6, ...baseCardStyle }}>
+          <CardContent sx={{ p: { xs: 3, md: 4 } }}>
+            <Typography variant="h5" fontWeight={700} align="center" gutterBottom color="#1e293b">
               How It Works
             </Typography>
             <Grid container spacing={4} sx={{ mt: 2 }}>
               {[
-                { step: '1', title: 'Upload Your Data', desc: 'Upload your business data (sales, expenses, etc.) in CSV or Excel format', color: '#9333ea' },
-                { step: '2', title: 'Choose a Question', desc: 'Click any card above to ask that question, or type your own question', color: '#3b82f6' },
-                { step: '3', title: 'Get Instant Insights', desc: 'Receive clear, actionable answers in plain English - no technical jargon', color: '#10b981' }
+                { step: '1', title: 'Upload Your Data', desc: 'Upload your business data (sales, expenses, etc.) in CSV or Excel format', icon: <CloudUpload sx={{ fontSize: 32 }} /> },
+                { step: '2', title: 'Choose a Question', desc: 'Click any card above to ask that question, or type your own question', icon: <Psychology sx={{ fontSize: 32 }} /> },
+                { step: '3', title: 'Get Instant Insights', desc: 'Receive clear, actionable answers in plain English - no technical jargon', icon: <Lightbulb sx={{ fontSize: 32 }} /> }
               ].map((item) => (
                 <Grid item xs={12} md={4} key={item.step} sx={{ textAlign: 'center' }}>
                   <Box
@@ -404,19 +454,18 @@ const AIAssistant: React.FC = () => {
                       width: 64,
                       height: 64,
                       borderRadius: '50%',
-                      background: `linear-gradient(135deg, ${item.color}, ${item.color}dd)`,
+                      bgcolor: '#eff6ff',
+                      border: '2px solid #1e3a8a',
                       display: 'flex',
                       alignItems: 'center',
                       justifyContent: 'center',
                       margin: '0 auto 16px',
-                      boxShadow: 3
+                      color: '#1e3a8a'
                     }}
                   >
-                    <Typography variant="h4" fontWeight={700} color="white">
-                      {item.step}
-                    </Typography>
+                    {item.icon}
                   </Box>
-                  <Typography variant="h6" fontWeight={700} gutterBottom>
+                  <Typography variant="h6" fontWeight={700} gutterBottom color="#1e293b">
                     {item.title}
                   </Typography>
                   <Typography variant="body2" color="text.secondary">
@@ -431,13 +480,14 @@ const AIAssistant: React.FC = () => {
         {/* CTA */}
         <Card
           sx={{
-            mt: 6,
-            background: 'linear-gradient(135deg, #10b981, #059669)',
+            mt: 4,
+            ...baseCardStyle,
+            background: 'linear-gradient(135deg, #1e3a8a 0%, #1e40af 100%)',
             color: 'white',
-            boxShadow: 4
+            overflow: 'hidden'
           }}
         >
-          <CardContent sx={{ p: 4 }}>
+          <CardContent sx={{ p: { xs: 3, md: 4 } }}>
             <Grid container spacing={3} alignItems="center">
               <Grid item xs={12} md={8}>
                 <Typography variant="h5" fontWeight={700} gutterBottom>
@@ -451,21 +501,23 @@ const AIAssistant: React.FC = () => {
                 <Button
                   variant="contained"
                   size="large"
+                  startIcon={<CloudUpload />}
                   onClick={() => navigate('/')}
                   sx={{
                     bgcolor: 'white',
-                    color: '#10b981',
+                    color: '#1e3a8a',
                     fontWeight: 700,
                     px: 4,
                     py: 1.5,
+                    textTransform: 'none',
                     '&:hover': {
-                      bgcolor: '#f0fdf4',
+                      bgcolor: '#f8fafc',
                       transform: 'scale(1.05)',
-                      boxShadow: 6
+                      boxShadow: '0 8px 24px rgba(255,255,255,0.25)'
                     }
                   }}
                 >
-                  Upload Data Now →
+                  Upload Data Now
                 </Button>
               </Grid>
             </Grid>

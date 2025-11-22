@@ -86,7 +86,13 @@ import {
   Edit,
   Delete,
   Save,
-  Chat
+  Chat,
+  Home,
+  FolderOpen,
+  SmartToy,
+  BarChart,
+  CompareArrows,
+  Psychology
 } from '@mui/icons-material';
 import { apiService, FileAnalysisResponse, AnalysisResult } from './services/apiService';
 import { 
@@ -116,6 +122,7 @@ import { ShareToMobileButton } from './components/ShareToMobileButton';
 import { generatePredictionsSummary, generateAnalyticsSummary } from './utils/mobileSummary';
 import ChatPage from './pages/ChatPage';
 import chatService from './services/chatService';
+import { baseCardStyle, baseCardHoverStyle } from './theme/cardStyles';
 
 // Register Chart.js components
 ChartJS.register(
@@ -788,7 +795,8 @@ const Dashboard: React.FC = () => {
     });
 
     try {
-      const response = await fetch('http://localhost:5000/api/upload', {
+      const backendUrl = process.env.REACT_APP_BACKEND_URL || 'http://localhost:8080';
+      const response = await fetch(`${backendUrl}/api/upload`, {
         method: 'POST',
         body: formData,
       });
@@ -798,9 +806,9 @@ const Dashboard: React.FC = () => {
       }
 
       const data = await response.json();
-      
+
       // Automatically analyze the data
-      const analysisResponse = await fetch('http://localhost:5000/api/analyze', {
+      const analysisResponse = await fetch(`${backendUrl}/api/analyze`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -1128,127 +1136,247 @@ const Dashboard: React.FC = () => {
   const renderOverview = () => (
     <>
 
-      {/* AI Assistant CTA Banner */}
-      <Card
+      {/* Hero Section - XenonStack Style: Centered, clean, light background */}
+      <Box
         sx={{
-          mb: 5,
-          background: 'linear-gradient(135deg, #400e02 0%, #601510 100%)',
-          color: 'white',
-          cursor: 'pointer',
-          transition: 'all 0.3s',
-          '&:hover': {
-            transform: 'translateY(-4px)',
-            boxShadow: '0 12px 24px rgba(64, 14, 2, 0.4)'
-          }
+          pt: { xs: 6, md: 10 },
+          pb: { xs: 6, md: 10 },
+          textAlign: 'center',
+          position: 'relative'
         }}
-        onClick={() => navigate('/ai-assistant')}
       >
-        <CardContent sx={{ p: { xs: 3, md: 4 } }}>
-          <Grid container spacing={3} alignItems="center">
-            <Grid item xs={12} md={8}>
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 2 }}>
-                <Box
-                  sx={{
-                    width: 56,
-                    height: 56,
-                    borderRadius: '12px',
-                    bgcolor: 'rgba(255,255,255,0.2)',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center'
-                  }}
-                >
-                  <Chat sx={{ fontSize: 32 }} />
-                </Box>
-                <Box>
-                  <Typography
-                    variant="h5"
-                    sx={{
-                      fontWeight: 700,
-                      mb: 0.5
-                    }}
-                  >
-                    ✨ AI Assistant for Small Business
-                  </Typography>
-                  <Typography variant="body2" sx={{ opacity: 0.95 }}>
-                    Financial planning, forecasting, analytics, and comparisons - all in one place
-                  </Typography>
-                </Box>
-              </Box>
-              <Typography variant="body1" sx={{ mb: 2, opacity: 0.9 }}>
-                Get instant insights about your finances, predict future trends, analyze performance, and compare periods - all with simple, easy-to-understand answers.
-              </Typography>
-              <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap', alignItems: 'center' }}>
-                <Chip
-                  label="💰 Financial Planning"
-                  sx={{
-                    bgcolor: 'rgba(255,255,255,0.2)',
-                    color: 'white',
-                    fontWeight: 600
-                  }}
-                />
-                <Chip
-                  label="🔮 Smart Forecasting"
-                  sx={{
-                    bgcolor: 'rgba(255,255,255,0.2)',
-                    color: 'white',
-                    fontWeight: 600
-                  }}
-                />
-                <Chip
-                  label="📊 Deep Analytics"
-                  sx={{
-                    bgcolor: 'rgba(255,255,255,0.2)',
-                    color: 'white',
-                    fontWeight: 600
-                  }}
-                />
-                <Chip
-                  label="⚖️ Easy Comparisons"
-                  sx={{
-                    bgcolor: 'rgba(255,255,255,0.2)',
-                    color: 'white',
-                    fontWeight: 600
-                  }}
-                />
-              </Box>
-            </Grid>
-            <Grid item xs={12} md={4} sx={{ textAlign: { xs: 'left', md: 'right' } }}>
-              <Button
-                variant="contained"
-                size="large"
-                endIcon={<ArrowForward />}
+        {/* Hero Heading */}
+        <Typography
+          variant="h2"
+          component="h1"
+          sx={{
+            fontWeight: 700,
+            fontSize: { xs: '2rem', sm: '2.75rem', md: '3.5rem' },
+            lineHeight: 1.2,
+            mb: 3,
+            px: 2,
+            maxWidth: 900,
+            mx: 'auto',
+            color: '#1e293b'
+          }}
+        >
+          Build Systems That{' '}
+          <Box
+            component="span"
+            sx={{
+              background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+              WebkitBackgroundClip: 'text',
+              WebkitTextFillColor: 'transparent',
+              backgroundClip: 'text',
+            }}
+          >
+            Think, Predict, and Grow
+          </Box>{' '}
+          - Simply
+        </Typography>
+
+        {/* Hero Description */}
+        <Typography
+          variant="body1"
+          sx={{
+            fontSize: { xs: '1rem', md: '1.125rem' },
+            color: 'text.secondary',
+            mb: 4,
+            maxWidth: 720,
+            mx: 'auto',
+            lineHeight: 1.7,
+            px: 2
+          }}
+        >
+          SME Analytics Platform unifies data, forecasting, and insights to power smart, 
+          explainable business decisions. Upload your spreadsheet and get AI-driven 
+          predictions tailored for small businesses.
+        </Typography>
+
+        {/* CTA Buttons */}
+        <Box
+          sx={{
+            display: 'flex',
+            gap: 2,
+            justifyContent: 'center',
+            flexWrap: 'wrap',
+            mb: 6
+          }}
+        >
+          <Button
+            variant="contained"
+            size="large"
+            onClick={() => setActiveTab(1)}
+            sx={{
+              bgcolor: '#1e3a8a',
+              px: 4,
+              py: 1.5,
+              fontSize: '1rem',
+              fontWeight: 600,
+              textTransform: 'none',
+              borderRadius: 2,
+              boxShadow: '0 4px 14px rgba(30,58,138,0.3)',
+              '&:hover': {
+                bgcolor: '#1e40af',
+                boxShadow: '0 6px 20px rgba(30,58,138,0.4)',
+              }
+            }}
+          >
+            Upload Your Data
+          </Button>
+
+          <Button
+            variant="outlined"
+            size="large"
+            onClick={() => navigate('/ai-assistant')}
+            sx={{
+              borderColor: '#cbd5e1',
+              color: '#475569',
+              px: 4,
+              py: 1.5,
+              fontSize: '1rem',
+              fontWeight: 600,
+              textTransform: 'none',
+              borderRadius: 2,
+              '&:hover': {
+                borderColor: '#94a3b8',
+                bgcolor: '#f8fafc'
+              }
+            }}
+          >
+            Explore AI Assistant
+          </Button>
+        </Box>
+
+        {/* Stats Row - Light cards with icons */}
+        <Grid
+          container
+          spacing={3}
+          sx={{
+            maxWidth: 1000,
+            mx: 'auto',
+            px: 2
+          }}
+        >
+          <Grid item xs={12} sm={4}>
+            <Box
+              sx={{
+                ...baseCardStyle,
+                bgcolor: 'background.paper',
+                p: 3,
+                textAlign: 'center',
+                border: '1px solid',
+                borderColor: 'divider'
+              }}
+            >
+              <Box
                 sx={{
-                  bgcolor: 'white',
-                  color: '#667eea',
-                  fontWeight: 700,
-                  px: 4,
-                  py: 1.5,
-                  fontSize: '1.1rem',
-                  '&:hover': {
-                    bgcolor: 'rgba(255,255,255,0.95)',
-                    transform: 'scale(1.05)'
-                  },
-                  boxShadow: '0 4px 14px rgba(0,0,0,0.2)'
+                  width: 56,
+                  height: 56,
+                  borderRadius: 2,
+                  bgcolor: 'rgba(59, 130, 246, 0.1)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  mx: 'auto',
+                  mb: 2
                 }}
               >
-                Try It Now
-              </Button>
-              <Typography variant="caption" sx={{ display: 'block', mt: 1, opacity: 0.9 }}>
-                15 pre-built prompts ready to use
+                <TrendingUp sx={{ fontSize: 28, color: '#3b82f6' }} />
+              </Box>
+              <Typography variant="h6" sx={{ fontWeight: 700, mb: 0.5, color: '#1e293b' }}>
+                45% Faster Insights
               </Typography>
-            </Grid>
+              <Typography variant="body2" color="text.secondary" sx={{ lineHeight: 1.6 }}>
+                Get business forecasts and trends in minutes, not weeks
+              </Typography>
+            </Box>
           </Grid>
-        </CardContent>
-      </Card>
+
+          <Grid item xs={12} sm={4}>
+            <Box
+              sx={{
+                ...baseCardStyle,
+                bgcolor: 'background.paper',
+                p: 3,
+                textAlign: 'center',
+                border: '1px solid',
+                borderColor: 'divider'
+              }}
+            >
+              <Box
+                sx={{
+                  width: 56,
+                  height: 56,
+                  borderRadius: 2,
+                  bgcolor: 'rgba(16, 185, 129, 0.1)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  mx: 'auto',
+                  mb: 2
+                }}
+              >
+                <Assessment sx={{ fontSize: 28, color: '#10b981' }} />
+              </Box>
+              <Typography variant="h6" sx={{ fontWeight: 700, mb: 0.5, color: '#1e293b' }}>
+                38% Better Decisions
+              </Typography>
+              <Typography variant="body2" color="text.secondary" sx={{ lineHeight: 1.6 }}>
+                AI-powered recommendations for inventory and cash flow
+              </Typography>
+            </Box>
+          </Grid>
+
+          <Grid item xs={12} sm={4}>
+            <Box
+              sx={{
+                ...baseCardStyle,
+                bgcolor: 'background.paper',
+                p: 3,
+                textAlign: 'center',
+                border: '1px solid',
+                borderColor: 'divider'
+              }}
+            >
+              <Box
+                sx={{
+                  width: 56,
+                  height: 56,
+                  borderRadius: 2,
+                  bgcolor: 'rgba(245, 158, 11, 0.1)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  mx: 'auto',
+                  mb: 2
+                }}
+              >
+                <ShowChart sx={{ fontSize: 28, color: '#f59e0b' }} />
+              </Box>
+              <Typography variant="h6" sx={{ fontWeight: 700, mb: 0.5, color: '#1e293b' }}>
+                60% Time Saved
+              </Typography>
+              <Typography variant="body2" color="text.secondary" sx={{ lineHeight: 1.6 }}>
+                Automate reporting and analysis with intelligent dashboards
+              </Typography>
+            </Box>
+          </Grid>
+        </Grid>
+      </Box>
 
       {/* How It Works - Simple 3-Step Process */}
-      <Box sx={{ mb: 5 }}>
+      <Box sx={{ mb: 8, mt: 8 }}>
         <Typography
-          variant="h4"
+          variant="h3"
           component="h2"
           align="center"
-          sx={{ mb: 1, fontWeight: 700 }}
+          sx={{
+            mb: 2,
+            fontWeight: 700,
+            color: '#1e293b',
+            fontSize: { xs: '1.75rem', md: '2.25rem' }
+          }}
         >
           How It Works
         </Typography>
@@ -1256,7 +1384,7 @@ const Dashboard: React.FC = () => {
           variant="body1"
           align="center"
           color="text.secondary"
-          sx={{ mb: 4, maxWidth: 600, mx: 'auto' }}
+          sx={{ mb: 5, maxWidth: 660, mx: 'auto', fontSize: '1.0625rem', lineHeight: 1.7, px: 2 }}
         >
           Get started in 3 simple steps. No training required.
         </Typography>
@@ -1265,14 +1393,11 @@ const Dashboard: React.FC = () => {
           <Grid item xs={12} md={4}>
             <Card
               sx={{
+                ...baseCardStyle,
+                ...baseCardHoverStyle,
                 height: '100%',
                 textAlign: 'center',
-                transition: 'all 0.3s',
-                cursor: 'pointer',
-                '&:hover': {
-                  transform: 'translateY(-4px)',
-                  boxShadow: 4
-                }
+                cursor: 'pointer'
               }}
               onClick={() => setActiveTab(1)}
             >
@@ -1305,14 +1430,11 @@ const Dashboard: React.FC = () => {
           <Grid item xs={12} md={4}>
             <Card
               sx={{
+                ...baseCardStyle,
+                ...baseCardHoverStyle,
                 height: '100%',
                 textAlign: 'center',
-                transition: 'all 0.3s',
-                cursor: 'pointer',
-                '&:hover': {
-                  transform: 'translateY(-4px)',
-                  boxShadow: 4
-                }
+                cursor: 'pointer'
               }}
               onClick={() => setActiveTab(2)}
             >
@@ -1345,14 +1467,11 @@ const Dashboard: React.FC = () => {
           <Grid item xs={12} md={4}>
             <Card
               sx={{
+                ...baseCardStyle,
+                ...baseCardHoverStyle,
                 height: '100%',
                 textAlign: 'center',
-                transition: 'all 0.3s',
-                cursor: 'pointer',
-                '&:hover': {
-                  transform: 'translateY(-4px)',
-                  boxShadow: 4
-                }
+                cursor: 'pointer'
               }}
               onClick={() => setActiveTab(3)}
             >
@@ -1385,12 +1504,17 @@ const Dashboard: React.FC = () => {
       </Box>
 
       {/* Industry Use Cases - Social Proof */}
-      <Box sx={{ mb: 5 }}>
+      <Box sx={{ mb: 8, mt: 8 }}>
         <Typography
-          variant="h4"
+          variant="h3"
           component="h2"
           align="center"
-          sx={{ mb: 1, fontWeight: 700 }}
+          sx={{
+            mb: 2,
+            fontWeight: 700,
+            color: '#1e293b',
+            fontSize: { xs: '1.75rem', md: '2.25rem' }
+          }}
         >
           Built for Your Business
         </Typography>
@@ -1398,7 +1522,7 @@ const Dashboard: React.FC = () => {
           variant="body1"
           align="center"
           color="text.secondary"
-          sx={{ mb: 4, maxWidth: 600, mx: 'auto' }}
+          sx={{ mb: 5, maxWidth: 660, mx: 'auto', fontSize: '1.0625rem', lineHeight: 1.7, px: 2 }}
         >
           Whether you run a cafe, retail store, or restaurant, get insights tailored to your industry.
         </Typography>
@@ -1407,11 +1531,9 @@ const Dashboard: React.FC = () => {
           <Grid item xs={12} sm={6} md={3}>
             <Card
               sx={{
-                height: '100%',
-                transition: 'all 0.3s',
-                '&:hover': {
-                  boxShadow: 4
-                }
+                ...baseCardStyle,
+                ...baseCardHoverStyle,
+                height: '100%'
               }}
             >
               <CardContent>
@@ -1432,11 +1554,9 @@ const Dashboard: React.FC = () => {
           <Grid item xs={12} sm={6} md={3}>
             <Card
               sx={{
-                height: '100%',
-                transition: 'all 0.3s',
-                '&:hover': {
-                  boxShadow: 4
-                }
+                ...baseCardStyle,
+                ...baseCardHoverStyle,
+                height: '100%'
               }}
             >
               <CardContent>
@@ -1457,11 +1577,9 @@ const Dashboard: React.FC = () => {
           <Grid item xs={12} sm={6} md={3}>
             <Card
               sx={{
-                height: '100%',
-                transition: 'all 0.3s',
-                '&:hover': {
-                  boxShadow: 4
-                }
+                ...baseCardStyle,
+                ...baseCardHoverStyle,
+                height: '100%'
               }}
             >
               <CardContent>
@@ -1482,11 +1600,9 @@ const Dashboard: React.FC = () => {
           <Grid item xs={12} sm={6} md={3}>
             <Card
               sx={{
-                height: '100%',
-                transition: 'all 0.3s',
-                '&:hover': {
-                  boxShadow: 4
-                }
+                ...baseCardStyle,
+                ...baseCardHoverStyle,
+                height: '100%'
               }}
             >
               <CardContent>
@@ -1509,9 +1625,15 @@ const Dashboard: React.FC = () => {
       {/* Current Status Cards - Dashboard Metrics */}
       <Box sx={{ mb: 4 }}>
         <Typography
-          variant="h5"
+          variant="h3"
           component="h2"
-          sx={{ mb: 3, fontWeight: 600 }}
+          sx={{
+            mb: 5,
+            fontWeight: 700,
+            color: '#1e293b',
+            fontSize: { xs: '1.75rem', md: '2.25rem' },
+            textAlign: 'center'
+          }}
         >
           Your Dashboard
         </Typography>
@@ -1519,15 +1641,12 @@ const Dashboard: React.FC = () => {
           <Grid item xs={12} sm={6} md={4}>
             <Card
               sx={{
+                ...baseCardStyle,
+                ...baseCardHoverStyle,
                 height: '100%',
                 cursor: 'pointer',
-                transition: 'all 0.3s',
                 border: uploadedFiles.length > 0 ? '2px solid' : '1px solid',
-                borderColor: uploadedFiles.length > 0 ? 'success.main' : 'divider',
-                '&:hover': {
-                  boxShadow: 4,
-                  transform: 'translateY(-2px)'
-                }
+                borderColor: uploadedFiles.length > 0 ? 'success.main' : 'divider'
               }}
               onClick={() => setActiveTab(1)}
             >
@@ -1551,15 +1670,12 @@ const Dashboard: React.FC = () => {
           <Grid item xs={12} sm={6} md={4}>
             <Card
               sx={{
+                ...baseCardStyle,
+                ...baseCardHoverStyle,
                 height: '100%',
                 cursor: 'pointer',
-                transition: 'all 0.3s',
                 border: analysisResults?.predictions?.length ? '2px solid' : '1px solid',
-                borderColor: analysisResults?.predictions?.length ? 'success.main' : 'divider',
-                '&:hover': {
-                  boxShadow: 4,
-                  transform: 'translateY(-2px)'
-                }
+                borderColor: analysisResults?.predictions?.length ? 'success.main' : 'divider'
               }}
               onClick={() => setActiveTab(2)}
             >
@@ -1583,15 +1699,12 @@ const Dashboard: React.FC = () => {
           <Grid item xs={12} sm={6} md={4}>
             <Card
               sx={{
+                ...baseCardStyle,
+                ...baseCardHoverStyle,
                 height: '100%',
                 cursor: 'pointer',
-                transition: 'all 0.3s',
                 border: analysisResults?.insights?.length ? '2px solid' : '1px solid',
-                borderColor: analysisResults?.insights?.length ? 'success.main' : 'divider',
-                '&:hover': {
-                  boxShadow: 4,
-                  transform: 'translateY(-2px)'
-                }
+                borderColor: analysisResults?.insights?.length ? 'success.main' : 'divider'
               }}
               onClick={() => setActiveTab(3)}
             >
@@ -1617,6 +1730,7 @@ const Dashboard: React.FC = () => {
       {/* Trust Signals - Security and Privacy */}
       <Card
         sx={{
+          ...baseCardStyle,
           bgcolor: '#f8f9fa',
           border: '1px solid #e0e0e0'
         }}
@@ -1694,10 +1808,14 @@ const Dashboard: React.FC = () => {
   const renderUpload = () => (
     <>
     <Paper sx={{ p: 3 }}>
-      <Typography variant="h2" component="h2" gutterBottom>
+      <Typography
+        variant={isMobile ? 'h4' : 'h3'}
+        component="h2"
+        sx={{ fontWeight: 700, mb: 1 }}
+      >
         Data Upload
       </Typography>
-      <Typography variant="body1" paragraph>
+      <Typography variant="body1" color="text.secondary" sx={{ mb: 3 }}>
         Upload your CSV or Excel files to get started with predictions.
       </Typography>
       
@@ -2028,7 +2146,7 @@ const Dashboard: React.FC = () => {
           <Grid container spacing={2}>
             {analysisResults.insights.slice(0, 3).map((insight, index) => (
               <Grid item xs={12} md={4} key={index}>
-                <Card>
+                <Card sx={{ ...baseCardStyle, ...baseCardHoverStyle, height: '100%' }}>
                   <CardContent>
                     <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
                       {insight.category === 'quality' && <CheckCircle color="success" sx={{ mr: 1 }} />}
@@ -2063,10 +2181,14 @@ const Dashboard: React.FC = () => {
     <Paper sx={{ p: isMobile ? 2 : 3 }}>
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2, flexWrap: 'wrap', gap: 2 }}>
         <Box>
-          <Typography variant={isMobile ? "h4" : "h2"} component="h2" gutterBottom>
+          <Typography
+            variant={isMobile ? 'h4' : 'h3'}
+            component="h2"
+            sx={{ fontWeight: 700, mb: 1 }}
+          >
             ML Predictions
           </Typography>
-          <Typography variant="body1" color="text.secondary">
+          <Typography variant="body1" color="text.secondary" sx={{ mb: 2 }}>
             AI-powered predictions from your uploaded data.
           </Typography>
         </Box>
@@ -2188,7 +2310,7 @@ const Dashboard: React.FC = () => {
             {/* Trend Analysis */}
             {Object.keys(analysisResults.trends).length > 0 && (
               <Grid item xs={12} md={6}>
-                <Card>
+                <Card sx={{ ...baseCardStyle, ...baseCardHoverStyle, height: '100%' }}>
                   <CardContent>
                     <Typography variant="h6" gutterBottom>
                       📈 Trend Analysis
@@ -2528,10 +2650,14 @@ Your predictions will include trends, forecasts, and actionable business insight
     <Paper sx={{ p: isMobile ? 2 : 3 }}>
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2, flexWrap: 'wrap' }}>
         <Box>
-          <Typography variant={isMobile ? "h4" : "h2"} component="h2" gutterBottom>
+          <Typography
+            variant={isMobile ? 'h4' : 'h3'}
+            component="h2"
+            sx={{ fontWeight: 700, mb: 1 }}
+          >
             Analytics Dashboard
           </Typography>
-          <Typography variant="body1" paragraph>
+          <Typography variant="body1" color="text.secondary" sx={{ mb: 3 }}>
             Comprehensive analytics and insights from your data analysis.
           </Typography>
         </Box>
@@ -2577,9 +2703,14 @@ Your predictions will include trends, forecasts, and actionable business insight
                   .slice(0, isMobile && !showAllAnalytics ? 2 : Object.keys(analysisResults.summary_stats).length)
                   .map(([column, stats]: [string, any]) => (
                   <Grid item xs={12} sm={6} md={3} key={column}>
-                    <Card>
+                    <Card sx={{ ...baseCardStyle, ...baseCardHoverStyle, height: '100%' }}>
                       <CardContent sx={{ p: isMobile ? 1.5 : 2 }}>
-                        <Typography variant="h6" fontSize={isMobile ? "0.9rem" : "1rem"} gutterBottom>
+                          <Typography
+                            variant="h6"
+                            fontSize={isMobile ? '0.9rem' : '1rem'}
+                            sx={{ fontWeight: 600, mb: 0.5 }}
+                            gutterBottom
+                          >
                           {column}
                         </Typography>
                         <Box sx={{ fontSize: isMobile ? '0.75rem' : '0.8rem' }}>
@@ -2599,7 +2730,7 @@ Your predictions will include trends, forecasts, and actionable business insight
           {/* Charts Data Visualization */}
           {analysisResults.charts_data.timeseries && (
             <Grid item xs={12} md={isMobile ? 12 : 8}>
-              <Paper sx={{ p: isMobile ? 1.5 : 2, minHeight: isMobile ? 200 : 300 }}>
+              <Card sx={{ ...baseCardStyle, ...baseCardHoverStyle, p: isMobile ? 1.5 : 2, minHeight: isMobile ? 200 : 300 }}>
                 <Typography variant="h6" gutterBottom fontSize={isMobile ? "0.9rem" : "1.25rem"}>
                   📈 {analysisResults.charts_data.timeseries.y_label} Over Time
                 </Typography>
@@ -2634,14 +2765,14 @@ Your predictions will include trends, forecasts, and actionable business insight
                     </Box>
                   </Box>
                 </Box>
-              </Paper>
+              </Card>
             </Grid>
           )}
 
           {/* Distribution Chart */}
           {analysisResults.charts_data.distribution && (
             <Grid item xs={12} md={isMobile ? 12 : 4}>
-              <Paper sx={{ p: isMobile ? 1.5 : 2, minHeight: isMobile ? 200 : 300 }}>
+              <Card sx={{ ...baseCardStyle, ...baseCardHoverStyle, p: isMobile ? 1.5 : 2, minHeight: isMobile ? 200 : 300 }}>
                 <Typography variant="h6" gutterBottom fontSize={isMobile ? "0.9rem" : "1.25rem"}>
                   📊 Distribution: {analysisResults.charts_data.distribution.column}
                 </Typography>
@@ -2659,7 +2790,7 @@ Your predictions will include trends, forecasts, and actionable business insight
                     </Box>
                   ))}
                 </Box>
-              </Paper>
+              </Card>
             </Grid>
           )}
 
@@ -2671,7 +2802,16 @@ Your predictions will include trends, forecasts, and actionable business insight
             <Grid container spacing={2}>
               {uploadedFiles.map((fileAnalysis, index) => (
                 <Grid item xs={12} md={6} key={index}>
-                  <Card variant="outlined">
+                  <Card
+                    variant="outlined"
+                    sx={{
+                      ...baseCardStyle,
+                      ...baseCardHoverStyle,
+                      height: '100%',
+                      borderLeft: 4,
+                      borderLeftColor: 'primary.main'
+                    }}
+                  >
                     <CardContent>
                       <Typography variant="h6" gutterBottom>
                         {fileAnalysis.fileName}
@@ -2727,10 +2867,14 @@ Upload CSV or Excel files with your business data to get started.`}
             <Box sx={{ display: 'flex', alignItems: 'center' }}>
               <Compare sx={{ fontSize: 40, color: 'primary.main', mr: 2 }} />
               <Box>
-                <Typography variant="h5" gutterBottom>
+                <Typography
+                  variant={isMobile ? 'h4' : 'h3'}
+                  component="h2"
+                  sx={{ fontWeight: 700, mb: 1 }}
+                >
                   Compare Multiple Time Periods
                 </Typography>
-                <Typography variant="body2" color="text.secondary">
+                <Typography variant="body1" color="text.secondary">
                   Upload data from multiple time periods to track how your business metrics evolve over time
                 </Typography>
               </Box>
@@ -3244,18 +3388,18 @@ Upload CSV or Excel files with your business data to get started.`}
 
                       <Grid container spacing={2} sx={{ mb: 2 }}>
                         <Grid item xs={6}>
-                          <Typography variant="body2" color="text.secondary">Frequency</Typography>
+                          <Typography variant="caption" color="text.secondary">Frequency</Typography>
                           <Typography variant="body1">{schedule.frequency}</Typography>
                         </Grid>
                         <Grid item xs={6}>
-                          <Typography variant="body2" color="text.secondary">Next Run</Typography>
+                          <Typography variant="caption" color="text.secondary">Next Run</Typography>
                           <Typography variant="body1">
                             {schedule.nextRunAt ? dayjs(schedule.nextRunAt).format('MMM D, YYYY h:mm A') : 'N/A'}
                           </Typography>
                         </Grid>
                         {schedule.lastRunAt && (
                           <Grid item xs={12}>
-                            <Typography variant="body2" color="text.secondary">Last Run</Typography>
+                            <Typography variant="caption" color="text.secondary">Last Run</Typography>
                             <Typography variant="body1">
                               {dayjs(schedule.lastRunAt).format('MMM D, YYYY h:mm A')}
                             </Typography>
@@ -3356,10 +3500,14 @@ Upload CSV or Excel files with your business data to get started.`}
           <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
             <Chat sx={{ fontSize: 40, color: 'primary.main', mr: 2 }} />
             <Box>
-              <Typography variant="h5" gutterBottom>
+              <Typography
+                variant={isMobile ? 'h4' : 'h3'}
+                component="h2"
+                sx={{ fontWeight: 700, mb: 1 }}
+              >
                 Chat with Your Data
               </Typography>
-              <Typography variant="body2" color="text.secondary">
+              <Typography variant="body1" color="text.secondary">
                 Ask questions about your uploaded files and get AI-powered insights
               </Typography>
             </Box>
@@ -3384,7 +3532,7 @@ Upload CSV or Excel files with your business data to get started.`}
             <Grid container spacing={2}>
               {uploadedFiles.map((file) => (
                 <Grid item xs={12} md={6} key={file.sessionId}>
-                  <Card>
+                  <Card sx={{ ...baseCardStyle, ...baseCardHoverStyle, height: '100%' }}>
                     <CardContent>
                       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start' }}>
                         <Box>
@@ -3463,11 +3611,9 @@ Upload CSV or Excel files with your business data to get started.`}
                 <Grid item xs={12} md={6} key={conversation.id}>
                   <Card 
                     sx={{ 
+                      ...baseCardStyle,
+                      ...baseCardHoverStyle,
                       cursor: 'pointer',
-                      '&:hover': { 
-                        boxShadow: 3,
-                        borderColor: 'primary.main' 
-                      },
                       border: '1px solid',
                       borderColor: 'divider'
                     }}
@@ -3572,69 +3718,165 @@ Upload CSV or Excel files with your business data to get started.`}
   };
 
   return (
-    <Container maxWidth="lg" sx={{ py: isMobile ? 1 : 2 }}>
-      <AppBar position="static" color="transparent" elevation={1} sx={{ mb: isMobile ? 2 : 3, borderRadius: 1 }}>
-        <Toolbar sx={{ minHeight: isMobile ? '56px' : '64px' }}>
-          <Typography variant={isMobile ? "h6" : "h5"} component="h1" sx={{ flexGrow: 1 }}>
-            {isMobile ? 'SME Analytics' : 'SME Analytics Platform'}
-          </Typography>
-        </Toolbar>
-        <Tabs 
-          value={activeTab} 
-          onChange={handleTabChange}
-          sx={{ 
-            borderTop: 1, 
-            borderColor: 'divider',
-            '& .MuiTab-root': {
-              minHeight: isMobile ? '48px' : '48px',
-              minWidth: isMobile ? '60px' : '90px',
-              fontSize: isMobile ? '0.75rem' : '0.875rem',
-              px: isMobile ? 0.5 : 2,
-            }
-          }}
-          aria-label="Analytics platform navigation tabs"
-          variant={isMobile ? "scrollable" : "standard"}
-          scrollButtons={isMobile ? "auto" : false}
-          allowScrollButtonsMobile
-        >
-          <Tab 
-            label={isMobile ? "🏠" : "🏠 Overview"} 
+    <Box sx={{ minHeight: '100vh', bgcolor: '#fafbfc' }}>
+      {/* Top Navigation Bar - XenonStack Style */}
+      <AppBar 
+        position="static" 
+        elevation={0}
+        sx={{ 
+          bgcolor: 'white',
+          borderBottom: '1px solid',
+          borderColor: 'divider'
+        }}
+      >
+        <Container maxWidth="lg">
+          <Toolbar sx={{ minHeight: { xs: '64px', md: '72px' }, px: { xs: 2, md: 0 } }}>
+            <Box sx={{ display: 'flex', alignItems: 'center', flexGrow: 1 }}>
+              <Box
+                sx={{
+                  width: 40,
+                  height: 40,
+                  borderRadius: 1.5,
+                  background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  mr: 1.5,
+                  boxShadow: '0 4px 12px rgba(102, 126, 234, 0.25)'
+                }}
+              >
+                <Assessment sx={{ color: 'white', fontSize: 24 }} />
+              </Box>
+              <Typography
+                variant="h6"
+                component="h1"
+                sx={{
+                  fontWeight: 700,
+                  color: '#1e293b',
+                  fontSize: { xs: '1.125rem', md: '1.25rem' }
+                }}
+              >
+                SME Analytics
+              </Typography>
+            </Box>
+            <Button
+              variant="contained"
+              startIcon={<Psychology />}
+              onClick={() => navigate('/ai-assistant')}
+              sx={{
+                bgcolor: '#400e02',
+                color: 'white',
+                px: { xs: 2, md: 3 },
+                py: 1,
+                fontSize: { xs: '0.875rem', md: '0.9375rem' },
+                fontWeight: 600,
+                textTransform: 'none',
+                borderRadius: 2,
+                boxShadow: '0 2px 8px rgba(64, 14, 2, 0.25)',
+                '&:hover': {
+                  bgcolor: '#5a1403',
+                  boxShadow: '0 4px 12px rgba(64, 14, 2, 0.35)'
+                }
+              }}
+            >
+              {isMobile ? 'AI Assistant' : 'AI Assistant for Small Business'}
+            </Button>
+          </Toolbar>
+        </Container>
+      </AppBar>
+
+      <Container maxWidth="lg" sx={{ py: isMobile ? 2 : 3 }}>
+        {/* Tab Navigation */}
+        <Box sx={{ mb: 3 }}>
+          <Tabs
+            value={activeTab}
+            onChange={handleTabChange}
+            sx={{
+              borderBottom: 1,
+              borderColor: 'divider',
+              '& .MuiTab-root': {
+                minHeight: '56px',
+                minWidth: isMobile ? '80px' : '120px',
+                fontSize: isMobile ? '0.8125rem' : '0.9375rem',
+                fontWeight: 600,
+                textTransform: 'none',
+                color: '#64748b',
+                gap: 1,
+                px: isMobile ? 1 : 2,
+                '&.Mui-selected': {
+                  color: '#1e3a8a'
+                },
+                '& .MuiSvgIcon-root': {
+                  fontSize: isMobile ? '1.25rem' : '1.5rem',
+                }
+              },
+              '& .MuiTabs-indicator': {
+                height: 3,
+                borderRadius: '3px 3px 0 0',
+                bgcolor: '#1e3a8a'
+              },
+              '& .MuiTabs-scrollButtons': {
+                '&.Mui-disabled': {
+                  opacity: 0.3
+                }
+              }
+            }}
+            aria-label="Analytics platform navigation tabs"
+            variant={isMobile ? "scrollable" : "standard"}
+            centered={!isMobile}
+            scrollButtons={isMobile ? "auto" : false}
+            allowScrollButtonsMobile
+          >
+          <Tab
+            icon={<Home />}
+            label={isMobile ? "" : "Overview"}
+            iconPosition="start"
             id="tab-overview"
             aria-controls="panel-overview"
             aria-label="Overview dashboard tab"
           />
-          <Tab 
-            label={isMobile ? "📁" : "📁 Upload Data"} 
+          <Tab
+            icon={<FolderOpen />}
+            label={isMobile ? "" : "Upload Data"}
+            iconPosition="start"
             id="tab-upload"
             aria-controls="panel-upload"
             aria-label="Upload data files tab"
           />
-          <Tab 
-            label={isMobile ? "🤖" : "🤖 Predictions"} 
+          <Tab
+            icon={<SmartToy />}
+            label={isMobile ? "" : "Predictions"}
+            iconPosition="start"
             id="tab-predictions"
             aria-controls="panel-predictions"
             aria-label="View ML predictions tab"
           />
-          <Tab 
-            label={isMobile ? "📊" : "📊 Analytics"} 
+          <Tab
+            icon={<BarChart />}
+            label={isMobile ? "" : "Analytics"}
+            iconPosition="start"
             id="tab-analytics"
             aria-controls="panel-analytics"
             aria-label="View analytics dashboard tab"
           />
-          <Tab 
-            label={isMobile ? "⚖️" : "⚖️ Compare"} 
+          <Tab
+            icon={<CompareArrows />}
+            label={isMobile ? "" : "Compare"}
+            iconPosition="start"
             id="tab-compare"
             aria-controls="panel-compare"
             aria-label="Compare time periods tab"
           />
-          <Tab 
-            label={isMobile ? "💬" : "💬 Chat"} 
+          <Tab
+            icon={<Chat />}
+            label={isMobile ? "" : "Chat"}
+            iconPosition="start"
             id="tab-chat"
             aria-controls="panel-chat"
             aria-label="Chat with your data tab"
           />
         </Tabs>
-      </AppBar>
+        </Box>
 
       <TabPanel value={activeTab} index={0}>
         {renderOverview()}
@@ -4045,6 +4287,7 @@ Upload CSV or Excel files with your business data to get started.`}
         </Alert>
       </Snackbar>
     </Container>
+    </Box>
   );
 };
 
