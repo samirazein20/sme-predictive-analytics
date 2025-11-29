@@ -92,7 +92,7 @@ const ChatPage: React.FC = () => {
   };
 
   const handleBack = () => {
-    navigate('/dashboard');
+    navigate('/');
   };
 
   const renderHeader = () => (
