@@ -2178,17 +2178,40 @@ const Dashboard: React.FC = () => {
   );
 
   const renderPredictions = () => (
-    <Paper sx={{ p: isMobile ? 2 : 3 }}>
-      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2, flexWrap: 'wrap', gap: 2 }}>
+    <Paper
+      elevation={0}
+      sx={{
+        p: isMobile ? 2 : 4,
+        borderRadius: 3,
+        border: '1px solid',
+        borderColor: 'rgba(15, 23, 42, 0.08)',
+        boxShadow: '0 4px 24px rgba(15, 23, 42, 0.08)',
+        bgcolor: 'white'
+      }}
+    >
+      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3, flexWrap: 'wrap', gap: 2 }}>
         <Box>
           <Typography
             variant={isMobile ? 'h4' : 'h3'}
             component="h2"
-            sx={{ fontWeight: 700, mb: 1 }}
+            sx={{
+              fontWeight: 700,
+              mb: 1,
+              color: '#1e293b',
+              fontSize: { xs: '1.75rem', sm: '2.25rem' }
+            }}
           >
             ML Predictions
           </Typography>
-          <Typography variant="body1" color="text.secondary" sx={{ mb: 2 }}>
+          <Typography
+            variant="body1"
+            sx={{
+              mb: 2,
+              color: '#64748b',
+              fontSize: '1rem',
+              lineHeight: 1.6
+            }}
+          >
             AI-powered predictions from your uploaded data.
           </Typography>
         </Box>
@@ -2201,8 +2224,19 @@ const Dashboard: React.FC = () => {
                   startIcon={<Download />}
                   onClick={handleDownloadClick}
                   sx={{
-                    background: 'linear-gradient(45deg, #2196F3 30%, #21CBF3 90%)',
-                    boxShadow: '0 3px 5px 2px rgba(33, 203, 243, .3)',
+                    background: 'linear-gradient(135deg, #1e3a8a 0%, #1e40af 100%)',
+                    boxShadow: '0 4px 12px rgba(30, 58, 138, 0.3)',
+                    textTransform: 'none',
+                    fontWeight: 600,
+                    borderRadius: 2,
+                    px: 3,
+                    py: 1.5,
+                    '&:hover': {
+                      background: 'linear-gradient(135deg, #1e40af 0%, #2563eb 100%)',
+                      boxShadow: '0 6px 16px rgba(30, 58, 138, 0.4)',
+                      transform: 'translateY(-2px)',
+                    },
+                    transition: 'all 0.2s'
                   }}
                 >
                   Download Report
@@ -2217,7 +2251,8 @@ const Dashboard: React.FC = () => {
                   sx={{
                     minWidth: '44px',
                     minHeight: '44px',
-                    background: 'linear-gradient(45deg, #9c27b0 30%, #ba68c8 90%)',
+                    background: 'linear-gradient(135deg, #1e3a8a 0%, #1e40af 100%)',
+                    borderRadius: 2,
                   }}
                 >
                   📱 Share
@@ -2228,7 +2263,7 @@ const Dashboard: React.FC = () => {
           {!isMobile && (
             <FormControlLabel
               control={
-                <Switch 
+                <Switch
                   checked={usePlainLanguage}
                   onChange={(e) => setUsePlainLanguage(e.target.checked)}
                   color="primary"
@@ -2647,17 +2682,40 @@ Your predictions will include trends, forecasts, and actionable business insight
   );
 
   const renderAnalytics = () => (
-    <Paper sx={{ p: isMobile ? 2 : 3 }}>
-      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2, flexWrap: 'wrap' }}>
+    <Paper
+      elevation={0}
+      sx={{
+        p: isMobile ? 2 : 4,
+        borderRadius: 3,
+        border: '1px solid',
+        borderColor: 'rgba(15, 23, 42, 0.08)',
+        boxShadow: '0 4px 24px rgba(15, 23, 42, 0.08)',
+        bgcolor: 'white'
+      }}
+    >
+      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3, flexWrap: 'wrap' }}>
         <Box>
           <Typography
             variant={isMobile ? 'h4' : 'h3'}
             component="h2"
-            sx={{ fontWeight: 700, mb: 1 }}
+            sx={{
+              fontWeight: 700,
+              mb: 1,
+              color: '#1e293b',
+              fontSize: { xs: '1.75rem', sm: '2.25rem' }
+            }}
           >
             Analytics Dashboard
           </Typography>
-          <Typography variant="body1" color="text.secondary" sx={{ mb: 3 }}>
+          <Typography
+            variant="body1"
+            sx={{
+              mb: 3,
+              color: '#64748b',
+              fontSize: '1rem',
+              lineHeight: 1.6
+            }}
+          >
             Comprehensive analytics and insights from your data analysis.
           </Typography>
         </Box>
@@ -2670,7 +2728,8 @@ Your predictions will include trends, forecasts, and actionable business insight
             sx={{
               minWidth: '44px',
               minHeight: '44px',
-              background: 'linear-gradient(45deg, #9c27b0 30%, #ba68c8 90%)',
+              background: 'linear-gradient(135deg, #1e3a8a 0%, #1e40af 100%)',
+              borderRadius: 2,
             }}
           >
             📱 Share
@@ -2861,20 +2920,55 @@ Upload CSV or Excel files with your business data to get started.`}
 
   const renderComparison = () => (
     <LocalizationProvider dateAdapter={AdapterDayjs}>
-      <Paper sx={{ p: 3 }}>
+      <Paper
+        elevation={0}
+        sx={{
+          p: isMobile ? 2 : 4,
+          borderRadius: 3,
+          border: '1px solid',
+          borderColor: 'rgba(15, 23, 42, 0.08)',
+          boxShadow: '0 4px 24px rgba(15, 23, 42, 0.08)',
+          bgcolor: 'white'
+        }}
+      >
         <Box sx={{ mb: 4 }}>
-          <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 2 }}>
-            <Box sx={{ display: 'flex', alignItems: 'center' }}>
-              <Compare sx={{ fontSize: 40, color: 'primary.main', mr: 2 }} />
+          <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 3, flexWrap: 'wrap', gap: 2 }}>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+              <Box
+                sx={{
+                  width: 48,
+                  height: 48,
+                  background: 'linear-gradient(135deg, #1e3a8a 0%, #1e40af 100%)',
+                  borderRadius: 2,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  boxShadow: '0 2px 8px rgba(30, 58, 138, 0.25)'
+                }}
+              >
+                <Compare sx={{ fontSize: 28, color: 'white' }} />
+              </Box>
               <Box>
                 <Typography
                   variant={isMobile ? 'h4' : 'h3'}
                   component="h2"
-                  sx={{ fontWeight: 700, mb: 1 }}
+                  sx={{
+                    fontWeight: 700,
+                    mb: 1,
+                    color: '#1e293b',
+                    fontSize: { xs: '1.75rem', sm: '2.25rem' }
+                  }}
                 >
                   Compare Multiple Time Periods
                 </Typography>
-                <Typography variant="body1" color="text.secondary">
+                <Typography
+                  variant="body1"
+                  sx={{
+                    color: '#64748b',
+                    fontSize: '1rem',
+                    lineHeight: 1.6
+                  }}
+                >
                   Upload data from multiple time periods to track how your business metrics evolve over time
                 </Typography>
               </Box>
@@ -2885,13 +2979,43 @@ Upload CSV or Excel files with your business data to get started.`}
               onClick={addPeriod}
               disabled={periods.length >= 5}
               size="small"
+              sx={{
+                background: 'linear-gradient(135deg, #1e3a8a 0%, #1e40af 100%)',
+                boxShadow: '0 4px 12px rgba(30, 58, 138, 0.3)',
+                textTransform: 'none',
+                fontWeight: 600,
+                borderRadius: 2,
+                px: 3,
+                py: 1.5,
+                '&:hover': {
+                  background: 'linear-gradient(135deg, #1e40af 0%, #2563eb 100%)',
+                  boxShadow: '0 6px 16px rgba(30, 58, 138, 0.4)',
+                  transform: 'translateY(-2px)',
+                },
+                '&:disabled': {
+                  background: '#e2e8f0',
+                  color: '#94a3b8',
+                },
+                transition: 'all 0.2s'
+              }}
             >
               Add Period
             </Button>
           </Box>
 
-          <Alert severity="info" sx={{ mb: 3 }}>
-            <Typography variant="body2">
+          <Alert
+            severity="info"
+            sx={{
+              mb: 3,
+              borderRadius: 2,
+              border: '1px solid #bfdbfe',
+              bgcolor: '#dbeafe',
+              '& .MuiAlert-icon': {
+                color: '#1e40af'
+              }
+            }}
+          >
+            <Typography variant="body2" sx={{ color: '#1e293b' }}>
               💡 <strong>Multi-period comparison:</strong> Compare {periods.length} periods side-by-side. Add up to 5 periods to track long-term trends and identify patterns in your business metrics.
             </Typography>
           </Alert>
