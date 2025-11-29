@@ -261,21 +261,6 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({
                     {/* AI Message Metadata */}
                     {message.senderType === 'AI' && message.metadata && (
                       <Box sx={{ mt: 2 }}>
-                        {message.metadata.confidence && (
-                          <Chip
-                            label={`Confidence: ${message.metadata.confidence}`}
-                            size="small"
-                            sx={{
-                              bgcolor: '#dbeafe',
-                              color: '#1e40af',
-                              fontWeight: 600,
-                              border: '1px solid #bfdbfe',
-                              mr: 1,
-                              mt: 1,
-                            }}
-                          />
-                        )}
-
                         {/* Suggestions */}
                         {message.metadata.suggestions &&
                           message.metadata.suggestions.length > 0 && (
