@@ -1160,7 +1160,7 @@ const Dashboard: React.FC = () => {
             color: '#1e293b'
           }}
         >
-          Build Systems That{' '}
+          Predict Better. Decide Smarter.{' '}
           <Box
             component="span"
             sx={{
@@ -1170,9 +1170,9 @@ const Dashboard: React.FC = () => {
               backgroundClip: 'text',
             }}
           >
-            Think, Predict, and Grow
+            Grow Faster
           </Box>{' '}
-          - Simply
+          — Without Complexity.
         </Typography>
 
         {/* Hero Description */}
