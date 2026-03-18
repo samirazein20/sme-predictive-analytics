@@ -1,3 +1,10 @@
+# Ignore all dotfiles and dotfolders (e.g. .env, .idea, .cache)
+.*
+
+# Keep essential repo dotfiles/dotfolders
+!.gitignore
+!.github/
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
